@@ -1,0 +1,9 @@
+.git
+.env
+node_modules
+graphify-out
+.DS_Store
+
+# Runtime-managed private workspace content. Keep only the directory marker.
+/workspaces/*
+!/workspaces/.gitkeep

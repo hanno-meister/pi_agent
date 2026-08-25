@@ -1,0 +1,4 @@
+# Shell configuration tracked with the infra repository.
+# Optional provider credentials are supplied by Docker Compose, never here.
+
+# `pimatt` and `pibrain` are installed in /usr/local/bin by the container image.

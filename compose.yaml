@@ -1,0 +1,32 @@
+services:
+  pi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /pi_agent
+    stdin_open: true
+    tty: true
+    init: true
+    command: ["sleep", "infinity"]
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:-}
+      GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:-}
+    volumes:
+      - .:/pi_agent
+      - pi-agent:/root/.pi/agent
+      - ssh-data:/root/.ssh
+      - nvim-data:/root/.local/share/nvim
+      - nvim-cache:/root/.cache/nvim
+      - nvim-state:/root/.local/state/nvim
+      - tmux-plugins:/root/.local/share/tmux/plugins
+
+volumes:
+  pi-agent:
+  ssh-data:
+  nvim-data:
+  nvim-cache:
+  nvim-state:
+  tmux-plugins:

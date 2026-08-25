@@ -1,0 +1,12 @@
+title = "portable-agent-environment"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Tracked examples document secret names but contain no values."
+regexes = [
+  '''ANTHROPIC_API_KEY=''',
+  '''OPENAI_API_KEY=''',
+  '''TAVILY_API_KEY=''',
+]
