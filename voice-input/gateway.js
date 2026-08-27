@@ -255,9 +255,13 @@ export function createVoiceGateway(overrides = {}) {
         return;
       }
       if (request.method === "GET" && url.pathname === "/health") {
+        const transcriptionConfigured = Boolean(options.apiKey);
         json(response, 200, {
-          status: "ok",
-          transcriptionConfigured: Boolean(options.apiKey),
+          status: transcriptionConfigured ? "ok" : "unconfigured",
+          ...(transcriptionConfigured
+            ? {}
+            : { action: "Set OPENAI_API_KEY to enable transcription" }),
+          transcriptionConfigured,
           browserArmed: recorderIsAvailable(),
         });
         return;

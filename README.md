@@ -140,15 +140,35 @@ Available settings include provider credentials and Git author identity. `.env` 
 
 ### Voice dictation
 
-Set `OPENAI_API_KEY`, start Compose, then forward the loopback-only gateway from the machine running Chrome:
+Configure `OPENAI_API_KEY` in `.env`, then start Compose:
+
+```sh
+cp .env.example .env
+# edit .env: set OPENAI_API_KEY
+docker compose up --build --detach
+```
+
+The gateway binds only to the development host's loopback interface. From the machine running Chrome, forward it over SSH:
 
 ```sh
 ssh -L 4317:localhost:4317 your-development-host
 ```
 
-Open `http://localhost:4317`, enable the microphone, and use `Alt+R` or `/voice` to start and stop dictation. Pi inserts the transcript into the draft without submitting it. `/voice-setup` selects `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, or `whisper-1` for only the current Pi session.
+Open `http://localhost:4317`, grant Chrome microphone permission, then click **Enable microphone**. This arms the recorder browser. In an interactive Pi session, use `Alt+R` or `/voice` to start and stop dictation; Pi inserts the transcript into the draft without submitting it. Use `/voice-setup` to select `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, or `whisper-1` for only that Pi session.
 
-New sessions default to `gpt-4o-mini-transcribe`, English, and a 120-second recording limit. Override these reproducibly with `VOICE_TRANSCRIPTION_MODEL`, `VOICE_LANGUAGE`, and `VOICE_MAX_DURATION_SECONDS`; use `VOICE_GATEWAY_PORT` when port 4317 is unavailable. Invalid values fail before transcription.
+New sessions default to `gpt-4o-mini-transcribe`, English, and a 120-second recording limit. `.env.example` documents `VOICE_GATEWAY_PORT`, `VOICE_TRANSCRIPTION_MODEL`, `VOICE_LANGUAGE`, `VOICE_MAX_DURATION_SECONDS`, and `OPENAI_API_KEY`. Set `VOICE_GATEWAY_PORT` if 4317 conflicts, and use that port in both the Compose URL and SSH forwarding command. Invalid values fail before transcription.
+
+#### Voice troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| SSH tunnel fails | Confirm SSH access, rerun the forwarding command, and use the configured `VOICE_GATEWAY_PORT`. |
+| Port conflict | Set an unused `VOICE_GATEWAY_PORT` in `.env`, restart Compose, and forward that same port. |
+| Missing credentials | Set `OPENAI_API_KEY` in `.env` and restart `voice-gateway`; `/health` reports `unconfigured` with the required action while the environment remains usable. |
+| Chrome cannot record | Open the forwarded `localhost` page, grant microphone permission, then click **Enable microphone**. |
+| Recorder held by another browser | Close its voice page, or use the new page's explicit takeover control once no recording is active. |
+| Pi session is stale | Restart the Pi session; it re-registers automatically. Do not expect an old session to receive a transcript. |
+| Target lost during transcription | The recorder page shows recovery text. Copy it manually; it is never routed to another Pi session. |
 
 ## Portability and verification
 
