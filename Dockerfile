@@ -18,6 +18,7 @@ RUN apt-get update \
         fd-find \
         git \
         gzip \
+        gh \
         ncurses-term \
         openssh-client \
         python3 \
