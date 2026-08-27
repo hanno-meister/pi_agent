@@ -3,17 +3,39 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 
+import { resolveVoiceConfig, validateVoiceConfig } from "./voice-config.js";
+
 const publicDirectory = fileURLToPath(new URL("./public/", import.meta.url));
 const defaultTranscriptionUrl = "https://api.openai.com/v1/audio/transcriptions";
+// Chrome targets 128 kbit/s Opus; this allows equal space again for WebM overhead.
+const defaultUploadBytesPerSecond = 32_000;
 
 function json(response, status, value) {
   response.writeHead(status, { "content-type": "application/json" });
   response.end(JSON.stringify(value));
 }
 
-async function readBody(request) {
+class RequestError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function readBody(request, maxBytes, limitMessage) {
+  const contentLength = Number(request.headers["content-length"]);
+  if (maxBytes && Number.isFinite(contentLength) && contentLength > maxBytes) {
+    throw new RequestError(413, limitMessage);
+  }
   const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
+  let bytes = 0;
+  for await (const chunk of request) {
+    bytes += chunk.length;
+    if (maxBytes && bytes > maxBytes) {
+      throw new RequestError(413, limitMessage);
+    }
+    chunks.push(chunk);
+  }
   return Buffer.concat(chunks);
 }
 
@@ -50,19 +72,26 @@ async function transcribe(audio, contentType, options) {
 }
 
 export function createVoiceGateway(overrides = {}) {
+  const voiceConfig = resolveVoiceConfig(overrides);
   const options = {
     apiKey: overrides.apiKey ?? process.env.OPENAI_API_KEY ?? "",
     fetchImpl: overrides.fetchImpl ?? fetch,
-    language: overrides.language ?? process.env.VOICE_LANGUAGE ?? "en",
-    model:
-      overrides.model ??
-      process.env.VOICE_TRANSCRIPTION_MODEL ??
-      "gpt-4o-mini-transcribe",
+    ...voiceConfig,
     now: overrides.now ?? Date.now,
     pollTimeoutMs: overrides.pollTimeoutMs ?? 25_000,
     recorderLeaseTtlMs: overrides.recorderLeaseTtlMs ?? 15_000,
     sessionTtlMs: overrides.sessionTtlMs ?? 15_000,
     transcriptionUrl: overrides.transcriptionUrl ?? defaultTranscriptionUrl,
+    uploadBytesPerSecond:
+      overrides.uploadBytesPerSecond ?? defaultUploadBytesPerSecond,
+  };
+  if (!Number.isInteger(options.uploadBytesPerSecond) || options.uploadBytesPerSecond < 1) {
+    throw new Error("Upload bytes per second must be a positive integer");
+  }
+  const defaultSessionConfig = {
+    language: options.language,
+    maxDurationSeconds: options.maxDurationSeconds,
+    model: options.model,
   };
   const sessions = new Map();
   const recorderConnections = new Map();
@@ -126,13 +155,16 @@ export function createVoiceGateway(overrides = {}) {
         json(response, 409, { error: "Open the voice page and enable the microphone" });
         return;
       }
+      const session = sessions.get(sessionId);
       activeRecording = {
+        config: { ...session.config },
         id: randomUUID(),
         ownerSessionId: sessionId,
         recorderId: lease.recorderId,
         state: "recording",
       };
       sendRecorderEvent(activeRecording.recorderId, "recording-start", {
+        maxDurationSeconds: activeRecording.config.maxDurationSeconds,
         recordingId: activeRecording.id,
         sessionId: activeRecording.ownerSessionId,
       });
@@ -172,6 +204,14 @@ export function createVoiceGateway(overrides = {}) {
         await serveAsset(response, "app.js", "text/javascript; charset=utf-8");
         return;
       }
+      if (request.method === "GET" && url.pathname === "/recording-policy.js") {
+        await serveAsset(
+          response,
+          "recording-policy.js",
+          "text/javascript; charset=utf-8",
+        );
+        return;
+      }
       if (request.method === "GET" && url.pathname === "/health") {
         json(response, 200, {
           status: "ok",
@@ -187,7 +227,23 @@ export function createVoiceGateway(overrides = {}) {
           return;
         }
         const current = sessions.get(input.id);
+        const inputConfig = input.config ?? defaultSessionConfig;
+        let config;
+        try {
+          config = validateVoiceConfig(
+            {
+              language: inputConfig.language,
+              maxDurationSeconds: Number(inputConfig.maxDurationSeconds),
+              model: inputConfig.model,
+            },
+            options.maxDurationSeconds,
+          );
+        } catch (error) {
+          json(response, 400, { error: error.message });
+          return;
+        }
         sessions.set(input.id, {
+          config,
           expiresAt: options.now() + options.sessionTtlMs,
           label: typeof input.label === "string" ? input.label : input.id,
           queue: current?.queue ?? [],
@@ -307,16 +363,25 @@ export function createVoiceGateway(overrides = {}) {
           !recording ||
           recording.id !== recordingId ||
           recording.recorderId !== request.headers["x-recorder-id"] ||
-          recording.state !== "transcribing"
+          !["recording", "transcribing"].includes(recording.state)
         ) {
           json(response, 409, { error: "Recording is not awaiting audio" });
           return;
         }
         recording.state = "processing";
         try {
-          const audio = await readBody(request);
+          const maxUploadBytes =
+            recording.config.maxDurationSeconds * options.uploadBytesPerSecond;
+          const audio = await readBody(
+            request,
+            maxUploadBytes,
+            `Recording exceeds the ${recording.config.maxDurationSeconds} second upload limit`,
+          );
           const contentType = request.headers["content-type"] ?? "audio/webm";
-          const text = await transcribe(audio, contentType, options);
+          const text = await transcribe(audio, contentType, {
+            ...options,
+            ...recording.config,
+          });
           deliverToSession(recording.ownerSessionId, { type: "transcript", text });
           if (activeRecording === recording) activeRecording = undefined;
           sendRecorderEvent(recording.recorderId, "recording-complete", {
@@ -329,7 +394,7 @@ export function createVoiceGateway(overrides = {}) {
           sendRecorderEvent(recording.recorderId, "recording-error", {
             message: error.message,
           });
-          json(response, 500, { error: error.message });
+          json(response, error.status ?? 500, { error: error.message });
         }
         return;
       }

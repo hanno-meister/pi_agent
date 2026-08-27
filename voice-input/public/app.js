@@ -1,3 +1,5 @@
+import { audioBitsPerSecond, stopAtDurationLimit } from "./recording-policy.js";
+
 const status = document.querySelector("#status");
 const enable = document.querySelector("#enable");
 const takeover = document.querySelector("#takeover");
@@ -10,6 +12,7 @@ let stream;
 let chunks = [];
 let recordingId;
 let leaseTimer;
+let recordingTimer;
 
 function show(message, state = "") {
   status.textContent = message;
@@ -59,7 +62,7 @@ async function enableMicrophone(takeoverLease = false) {
   }
 }
 
-async function startRecording(targetRecordingId) {
+async function startRecording(targetRecordingId, maxDurationSeconds) {
   if (!armed || recorder?.state === "recording") return;
   if (!MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
     show("Chrome WebM/Opus recording is unavailable");
@@ -68,18 +71,27 @@ async function startRecording(targetRecordingId) {
   recordingId = targetRecordingId;
   stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   chunks = [];
-  recorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+  recorder = new MediaRecorder(stream, {
+    audioBitsPerSecond,
+    mimeType: "audio/webm;codecs=opus",
+  });
   recorder.addEventListener("dataavailable", (event) => {
     if (event.data.size > 0) chunks.push(event.data);
   });
   recorder.addEventListener("stop", uploadRecording, { once: true });
   recorder.start();
+  clearTimeout(recordingTimer);
+  recordingTimer = setTimeout(
+    () => stopAtDurationLimit(() => stopRecording(targetRecordingId)),
+    maxDurationSeconds * 1000,
+  );
   toggle.textContent = "Stop recording";
   show("Recording…", "recording");
 }
 
 function stopRecording(eventRecordingId) {
   if (eventRecordingId !== recordingId || recorder?.state !== "recording") return;
+  clearTimeout(recordingTimer);
   recorder.stop();
   stream?.getTracks().forEach((track) => track.stop());
   toggle.textContent = "Start recording";
@@ -106,6 +118,7 @@ async function uploadRecording() {
   } catch (error) {
     show(error.message);
   } finally {
+    clearTimeout(recordingTimer);
     chunks = [];
     recorder = undefined;
     stream = undefined;
@@ -143,7 +156,9 @@ events.addEventListener("open", async () => {
 });
 events.addEventListener("recording-start", (event) => {
   const data = JSON.parse(event.data);
-  startRecording(data.recordingId).catch((error) => show(error.message));
+  startRecording(data.recordingId, data.maxDurationSeconds).catch((error) =>
+    show(error.message),
+  );
 });
 events.addEventListener("recording-stop", (event) => {
   stopRecording(JSON.parse(event.data).recordingId);

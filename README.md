@@ -138,6 +138,18 @@ cp .env.example .env
 
 Available settings include provider credentials and Git author identity. `.env` is ignored, and the container starts without provider credentials.
 
+### Voice dictation
+
+Set `OPENAI_API_KEY`, start Compose, then forward the loopback-only gateway from the machine running Chrome:
+
+```sh
+ssh -L 4317:localhost:4317 your-development-host
+```
+
+Open `http://localhost:4317`, enable the microphone, and use `Alt+R` or `/voice` to start and stop dictation. Pi inserts the transcript into the draft without submitting it. `/voice-setup` selects `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, or `whisper-1` for only the current Pi session.
+
+New sessions default to `gpt-4o-mini-transcribe`, English, and a 120-second recording limit. Override these reproducibly with `VOICE_TRANSCRIPTION_MODEL`, `VOICE_LANGUAGE`, and `VOICE_MAX_DURATION_SECONDS`; use `VOICE_GATEWAY_PORT` when port 4317 is unavailable. Invalid values fail before transcription.
+
 ## Portability and verification
 
 I use this environment on:

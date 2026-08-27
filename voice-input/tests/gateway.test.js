@@ -19,11 +19,11 @@ async function close(server) {
   await closed;
 }
 
-async function register(gatewayUrl, id) {
+async function register(gatewayUrl, id, config) {
   return fetch(`${gatewayUrl}/api/sessions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id, label: `/workspace/${id}` }),
+    body: JSON.stringify({ id, label: `/workspace/${id}`, config }),
   });
 }
 
@@ -79,7 +79,7 @@ test("concurrent sessions cannot stop, duplicate, or receive another session's r
   const upstreamUrl = await listen(upstream);
   const gateway = createVoiceGateway({
     apiKey: "test-key",
-    pollTimeoutMs: 20,
+    pollTimeoutMs: 200,
     transcriptionUrl: `${upstreamUrl}/v1/audio/transcriptions`,
   });
   const gatewayUrl = await listen(gateway);
@@ -88,7 +88,16 @@ test("concurrent sessions cannot stop, duplicate, or receive another session's r
     await close(upstream);
   });
 
-  assert.equal((await register(gatewayUrl, "session-a")).status, 201);
+  assert.equal(
+    (
+      await register(gatewayUrl, "session-a", {
+        language: "de",
+        maxDurationSeconds: 45,
+        model: "gpt-4o-transcribe",
+      })
+    ).status,
+    201,
+  );
   assert.equal((await register(gatewayUrl, "session-b")).status, 201);
   const startEvents = await connectRecorder(gatewayUrl, "recorder-a");
   assert.equal((await acquireLease(gatewayUrl, "recorder-a")).status, 200);
@@ -99,6 +108,7 @@ test("concurrent sessions cannot stop, duplicate, or receive another session's r
   assert.deepEqual(await started.json(), { state: "recording" });
   const recording = await readSseEvent(startEvents, "recording-start");
   assert.equal(recording.sessionId, "session-a");
+  assert.equal(recording.maxDurationSeconds, 45);
   assert.equal(typeof recording.recordingId, "string");
 
   const competingStop = await fetch(`${gatewayUrl}/api/sessions/session-b/toggle`, {
@@ -158,8 +168,99 @@ test("concurrent sessions cannot stop, duplicate, or receive another session's r
     204,
   );
   assert.equal(upstreamRequests, 1);
-  assert.match(upstreamBody, /gpt-4o-mini-transcribe/);
+  assert.match(upstreamBody, /gpt-4o-transcribe/);
+  assert.match(upstreamBody, /name="language"\r\n\r\nde/);
   assert.match(upstreamBody, /fake-webm-audio/);
+});
+
+test("invalid session configuration and oversized audio fail before transcription", async (t) => {
+  let upstreamRequests = 0;
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    fetchImpl: async () => {
+      upstreamRequests += 1;
+      return new Response(JSON.stringify({ text: "within boundary" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+    maxDurationSeconds: 2,
+    uploadBytesPerSecond: 4,
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  const invalidModel = await register(gatewayUrl, "invalid-model", {
+    language: "en",
+    maxDurationSeconds: 1,
+    model: "not-a-model",
+  });
+  assert.equal(invalidModel.status, 400);
+  assert.match((await invalidModel.json()).error, /Unsupported voice transcription model/);
+
+  const invalidDuration = await register(gatewayUrl, "invalid-duration", {
+    language: "en",
+    maxDurationSeconds: 3,
+    model: "whisper-1",
+  });
+  assert.equal(invalidDuration.status, 400);
+  assert.match(
+    (await invalidDuration.json()).error,
+    /VOICE_MAX_DURATION_SECONDS must be an integer from 1 to 2/,
+  );
+
+  assert.equal(
+    (
+      await register(gatewayUrl, "bounded-session", {
+        language: "en",
+        maxDurationSeconds: 1,
+        model: "whisper-1",
+      })
+    ).status,
+    201,
+  );
+  const events = await connectRecorder(gatewayUrl, "bounded-recorder");
+  await acquireLease(gatewayUrl, "bounded-recorder");
+  await fetch(`${gatewayUrl}/api/sessions/bounded-session/toggle`, { method: "POST" });
+  const recording = await readSseEvent(events, "recording-start");
+
+  // The browser's duration timer stops locally and uploads directly; the upload
+  // must atomically advance a still-recording gateway state.
+  const boundaryUpload = await fetch(
+    `${gatewayUrl}/api/recordings/${recording.recordingId}`,
+    {
+      method: "POST",
+      headers: recorderHeaders("bounded-recorder", { "content-type": "audio/webm" }),
+      body: Buffer.from("1234"),
+    },
+  );
+  assert.equal(boundaryUpload.status, 200);
+  assert.equal(upstreamRequests, 1);
+
+  const nextStartEvents = await connectRecorder(gatewayUrl, "bounded-recorder");
+  await fetch(`${gatewayUrl}/api/sessions/bounded-session/toggle`, { method: "POST" });
+  const nextRecording = await readSseEvent(nextStartEvents, "recording-start");
+  const nextStopEvents = await connectRecorder(gatewayUrl, "bounded-recorder");
+  await fetch(`${gatewayUrl}/api/sessions/bounded-session/toggle`, { method: "POST" });
+  await readSseEvent(nextStopEvents, "recording-stop");
+  const oversizedUpload = await fetch(
+    `${gatewayUrl}/api/recordings/${nextRecording.recordingId}`,
+    {
+      method: "POST",
+      headers: recorderHeaders("bounded-recorder", { "content-type": "audio/webm" }),
+      body: Buffer.from("12345"),
+    },
+  );
+  assert.equal(oversizedUpload.status, 413);
+  assert.deepEqual(await oversizedUpload.json(), {
+    error: "Recording exceeds the 1 second upload limit",
+  });
+  assert.equal(upstreamRequests, 1);
+
+  assert.throws(
+    () => createVoiceGateway({ maxDurationSeconds: 0 }),
+    /VOICE_MAX_DURATION_SECONDS must be an integer from 1 to 3600/,
+  );
 });
 
 test("one recorder lease requires explicit idle takeover and cannot be stolen while recording", async (t) => {

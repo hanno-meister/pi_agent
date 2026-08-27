@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
 
+import {
+  resolveVoiceConfig,
+  supportedTranscriptionModels,
+} from "./voice-config.js";
+
 const defaultGatewayUrl = process.env.VOICE_GATEWAY_URL ?? "http://voice-gateway:4317";
 
 function delay(milliseconds, signal) {
@@ -19,9 +24,12 @@ export function createVoiceExtension({
   fetchImpl = fetch,
   gatewayUrl = defaultGatewayUrl,
   registrationIntervalMs = 5000,
+  ...configOverrides
 } = {}) {
+  const defaultConfig = resolveVoiceConfig(configOverrides);
   return function voiceExtension(pi) {
     const sessionId = randomUUID();
+    let config = { ...defaultConfig };
     let controller;
     let interactiveContext;
 
@@ -40,11 +48,15 @@ export function createVoiceExtension({
       return response;
     }
 
-    async function register(ctx, signal) {
+    async function register(ctx, signal, registrationConfig = config) {
       await request("/api/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: sessionId, label: ctx.cwd }),
+        body: JSON.stringify({
+          id: sessionId,
+          label: ctx.cwd,
+          config: registrationConfig,
+        }),
         signal,
       });
     }
@@ -105,6 +117,29 @@ export function createVoiceExtension({
     pi.registerCommand("voice", {
       description: "Start or stop voice dictation",
       handler: async (_args, ctx) => toggle(ctx),
+    });
+
+    pi.registerCommand("voice-setup", {
+      description: "Choose this session's voice transcription model",
+      handler: async (_args, ctx) => {
+        if (ctx.mode !== "tui") {
+          ctx.ui.notify("Voice setup requires interactive mode", "error");
+          return;
+        }
+        const model = await ctx.ui.select(
+          "Voice transcription model",
+          supportedTranscriptionModels,
+        );
+        if (!model) return;
+        const selectedConfig = { ...config, model };
+        try {
+          await register(ctx, controller?.signal, selectedConfig);
+          config = selectedConfig;
+          ctx.ui.notify(`Voice transcription model: ${model}`, "info");
+        } catch (error) {
+          ctx.ui.notify(error.message, "error");
+        }
+      },
     });
 
     pi.registerShortcut("alt+r", {
