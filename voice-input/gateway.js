@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
@@ -57,47 +58,88 @@ export function createVoiceGateway(overrides = {}) {
       overrides.model ??
       process.env.VOICE_TRANSCRIPTION_MODEL ??
       "gpt-4o-mini-transcribe",
+    now: overrides.now ?? Date.now,
+    pollTimeoutMs: overrides.pollTimeoutMs ?? 25_000,
+    recorderLeaseTtlMs: overrides.recorderLeaseTtlMs ?? 15_000,
+    sessionTtlMs: overrides.sessionTtlMs ?? 15_000,
     transcriptionUrl: overrides.transcriptionUrl ?? defaultTranscriptionUrl,
   };
   const sessions = new Map();
-  let browserEvents;
-  let browserArmed = false;
+  const recorderConnections = new Map();
+  let recorderLease;
   let activeRecording;
 
-  function sendBrowserEvent(event, data) {
-    if (!browserEvents || browserEvents.destroyed) return false;
-    browserEvents.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  function pruneSessions() {
+    const now = options.now();
+    for (const [sessionId, session] of sessions) {
+      if (session.expiresAt > now) continue;
+      sessions.delete(sessionId);
+      session.waiter?.();
+    }
+  }
+
+  function currentRecorderLease() {
+    if (
+      recorderLease &&
+      recorderLease.expiresAt <= options.now() &&
+      !activeRecording
+    ) {
+      recorderLease = undefined;
+    }
+    return recorderLease;
+  }
+
+  function sendRecorderEvent(recorderId, event, data) {
+    const events = recorderConnections.get(recorderId);
+    if (!events || events.destroyed) return false;
+    events.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     return true;
   }
 
   function deliverToSession(sessionId, event) {
     const session = sessions.get(sessionId);
-    if (!session) return;
+    if (!session) return false;
     if (session.waiter) {
       const waiter = session.waiter;
       session.waiter = undefined;
       waiter(event);
-      return;
+    } else {
+      session.queue.push(event);
     }
-    session.queue.push(event);
+    return true;
+  }
+
+  function recorderIsAvailable() {
+    const lease = currentRecorderLease();
+    return Boolean(lease && recorderConnections.get(lease.recorderId));
   }
 
   async function toggle(sessionId, response) {
+    pruneSessions();
     if (!sessions.has(sessionId)) {
       json(response, 404, { error: "Pi session is unavailable" });
       return;
     }
     if (!activeRecording) {
-      if (!browserArmed || !browserEvents) {
+      const lease = currentRecorderLease();
+      if (!lease || !recorderIsAvailable()) {
         json(response, 409, { error: "Open the voice page and enable the microphone" });
         return;
       }
-      activeRecording = { sessionId, state: "recording" };
-      sendBrowserEvent("recording-start", { sessionId });
+      activeRecording = {
+        id: randomUUID(),
+        ownerSessionId: sessionId,
+        recorderId: lease.recorderId,
+        state: "recording",
+      };
+      sendRecorderEvent(activeRecording.recorderId, "recording-start", {
+        recordingId: activeRecording.id,
+        sessionId: activeRecording.ownerSessionId,
+      });
       json(response, 200, { state: "recording" });
       return;
     }
-    if (activeRecording.sessionId !== sessionId) {
+    if (activeRecording.ownerSessionId !== sessionId) {
       json(response, 409, { error: "Voice recording belongs to another Pi session" });
       return;
     }
@@ -105,13 +147,22 @@ export function createVoiceGateway(overrides = {}) {
       json(response, 409, { error: "Voice recording is already being transcribed" });
       return;
     }
+    if (!recorderConnections.get(activeRecording.recorderId)) {
+      json(response, 409, { error: "Recording browser is unavailable" });
+      return;
+    }
     activeRecording.state = "transcribing";
-    sendBrowserEvent("recording-stop", { sessionId });
+    sendRecorderEvent(activeRecording.recorderId, "recording-stop", {
+      recordingId: activeRecording.id,
+      sessionId: activeRecording.ownerSessionId,
+    });
     json(response, 200, { state: "transcribing" });
   }
 
   return createServer(async (request, response) => {
     try {
+      pruneSessions();
+      currentRecorderLease();
       const url = new URL(request.url ?? "/", "http://voice-gateway");
       if (request.method === "GET" && url.pathname === "/") {
         await serveAsset(response, "index.html", "text/html; charset=utf-8");
@@ -125,7 +176,7 @@ export function createVoiceGateway(overrides = {}) {
         json(response, 200, {
           status: "ok",
           transcriptionConfigured: Boolean(options.apiKey),
-          browserArmed,
+          browserArmed: recorderIsAvailable(),
         });
         return;
       }
@@ -137,6 +188,7 @@ export function createVoiceGateway(overrides = {}) {
         }
         const current = sessions.get(input.id);
         sessions.set(input.id, {
+          expiresAt: options.now() + options.sessionTtlMs,
           label: typeof input.label === "string" ? input.label : input.id,
           queue: current?.queue ?? [],
           waiter: current?.waiter,
@@ -145,31 +197,67 @@ export function createVoiceGateway(overrides = {}) {
         return;
       }
       if (request.method === "GET" && url.pathname === "/api/browser/events") {
+        const recorderId = url.searchParams.get("id");
+        if (!recorderId) {
+          json(response, 400, { error: "Recorder id is required" });
+          return;
+        }
         response.writeHead(200, {
           "cache-control": "no-cache",
           connection: "keep-alive",
           "content-type": "text/event-stream",
         });
         response.flushHeaders();
-        browserEvents = response;
+        const previous = recorderConnections.get(recorderId);
+        recorderConnections.set(recorderId, response);
+        if (previous && previous !== response) previous.end();
         request.on("close", () => {
-          if (browserEvents === response) {
-            browserEvents = undefined;
-            browserArmed = false;
+          if (recorderConnections.get(recorderId) === response) {
+            recorderConnections.delete(recorderId);
           }
         });
         return;
       }
-      if (request.method === "POST" && url.pathname === "/api/browser/armed") {
-        if (!browserEvents) {
+      if (request.method === "POST" && url.pathname === "/api/browser/lease") {
+        const input = await readJson(request);
+        if (typeof input.id !== "string" || input.id.length === 0) {
+          json(response, 400, { error: "Recorder id is required" });
+          return;
+        }
+        if (!recorderConnections.get(input.id)) {
           json(response, 409, { error: "Browser event connection is unavailable" });
           return;
         }
-        browserArmed = true;
-        response.writeHead(204).end();
+        const lease = currentRecorderLease();
+        if (lease && lease.recorderId !== input.id) {
+          if (!input.takeover) {
+            json(response, 409, { error: "Recorder lease is held by another browser" });
+            return;
+          }
+          if (activeRecording) {
+            json(response, 409, {
+              error: "Recorder lease cannot be taken over during a recording",
+            });
+            return;
+          }
+        }
+        recorderLease = {
+          expiresAt: options.now() + options.recorderLeaseTtlMs,
+          recorderId: input.id,
+        };
+        json(response, 200, { leased: true });
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/browser/toggle") {
+        const lease = currentRecorderLease();
+        if (!lease || request.headers["x-recorder-id"] !== lease.recorderId) {
+          json(response, 409, { error: "Browser does not hold the recorder lease" });
+          return;
+        }
+        if (activeRecording) {
+          await toggle(activeRecording.ownerSessionId, response);
+          return;
+        }
         if (sessions.size !== 1) {
           json(response, 409, { error: "Exactly one Pi session must be available" });
           return;
@@ -194,7 +282,7 @@ export function createVoiceGateway(overrides = {}) {
           json(response, 200, item);
           return;
         }
-        if (session.waiter) session.waiter(undefined);
+        session.waiter?.();
         let settled = false;
         const finish = (event) => {
           if (settled) return;
@@ -204,37 +292,49 @@ export function createVoiceGateway(overrides = {}) {
           if (event) json(response, 200, event);
           else response.writeHead(204).end();
         };
-        const timeout = setTimeout(() => finish(undefined), 25_000);
+        const timeout = setTimeout(() => finish(), options.pollTimeoutMs);
         session.waiter = finish;
         request.on("close", () => {
-          if (!response.writableEnded) finish(undefined);
+          if (!response.writableEnded) finish();
         });
         return;
       }
       const recordingMatch = url.pathname.match(/^\/api\/recordings\/([^/]+)$/);
       if (request.method === "POST" && recordingMatch) {
-        const sessionId = decodeURIComponent(recordingMatch[1]);
+        const recordingId = decodeURIComponent(recordingMatch[1]);
+        const recording = activeRecording;
         if (
-          !activeRecording ||
-          activeRecording.sessionId !== sessionId ||
-          activeRecording.state !== "transcribing"
+          !recording ||
+          recording.id !== recordingId ||
+          recording.recorderId !== request.headers["x-recorder-id"] ||
+          recording.state !== "transcribing"
         ) {
           json(response, 409, { error: "Recording is not awaiting audio" });
           return;
         }
-        const audio = await readBody(request);
-        const contentType = request.headers["content-type"] ?? "audio/webm";
-        const text = await transcribe(audio, contentType, options);
-        deliverToSession(sessionId, { type: "transcript", text });
-        activeRecording = undefined;
-        sendBrowserEvent("recording-complete", { sessionId });
-        json(response, 200, { transcribed: true });
+        recording.state = "processing";
+        try {
+          const audio = await readBody(request);
+          const contentType = request.headers["content-type"] ?? "audio/webm";
+          const text = await transcribe(audio, contentType, options);
+          deliverToSession(recording.ownerSessionId, { type: "transcript", text });
+          if (activeRecording === recording) activeRecording = undefined;
+          sendRecorderEvent(recording.recorderId, "recording-complete", {
+            recordingId: recording.id,
+            sessionId: recording.ownerSessionId,
+          });
+          json(response, 200, { transcribed: true });
+        } catch (error) {
+          if (activeRecording === recording) activeRecording = undefined;
+          sendRecorderEvent(recording.recorderId, "recording-error", {
+            message: error.message,
+          });
+          json(response, 500, { error: error.message });
+        }
         return;
       }
       json(response, 404, { error: "Not found" });
     } catch (error) {
-      activeRecording = undefined;
-      sendBrowserEvent("recording-error", { message: error.message });
       json(response, 500, { error: error.message });
     }
   });

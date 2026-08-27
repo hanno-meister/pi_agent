@@ -90,6 +90,47 @@ test("the extension pastes transcripts and never submits them", async () => {
   await pi.events.get("session_shutdown")({}, context);
 });
 
+test("interactive extension instances register distinct identities and renew them", async () => {
+  const registrations = [];
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url).endsWith("/api/sessions") && options.method === "POST") {
+      registrations.push(JSON.parse(options.body));
+      return response(201, { registered: true });
+    }
+    if (String(url).endsWith("/next")) return response(204);
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  const context = {
+    cwd: "/workspace/project",
+    mode: "tui",
+    ui: { notify() {}, pasteToEditor() {}, setStatus() {} },
+  };
+  const first = fakePi();
+  const second = fakePi();
+  createVoiceExtension({
+    fetchImpl,
+    gatewayUrl: "http://gateway.test",
+    registrationIntervalMs: 10,
+  })(first);
+  createVoiceExtension({
+    fetchImpl,
+    gatewayUrl: "http://gateway.test",
+    registrationIntervalMs: 10,
+  })(second);
+
+  await first.events.get("session_start")({}, context);
+  await second.events.get("session_start")({}, context);
+  await eventually(() => registrations.length >= 4);
+  const ids = new Set(registrations.map(({ id }) => id));
+  assert.equal(ids.size, 2);
+  for (const id of ids) {
+    assert.ok(registrations.filter((registration) => registration.id === id).length >= 2);
+  }
+
+  await first.events.get("session_shutdown")({}, context);
+  await second.events.get("session_shutdown")({}, context);
+});
+
 test("the extension does not start gateway work outside interactive mode", async () => {
   let fetched = false;
   const pi = fakePi();

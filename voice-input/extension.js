@@ -4,21 +4,21 @@ const defaultGatewayUrl = process.env.VOICE_GATEWAY_URL ?? "http://voice-gateway
 
 function delay(milliseconds, signal) {
   return new Promise((resolve) => {
-    const timer = setTimeout(resolve, milliseconds);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        resolve();
-      },
-      { once: true },
-    );
+    const finish = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timer = setTimeout(finish, milliseconds);
+    signal.addEventListener("abort", finish, { once: true });
+    if (signal.aborted) finish();
   });
 }
 
 export function createVoiceExtension({
   fetchImpl = fetch,
   gatewayUrl = defaultGatewayUrl,
+  registrationIntervalMs = 5000,
 } = {}) {
   return function voiceExtension(pi) {
     const sessionId = randomUUID();
@@ -38,6 +38,27 @@ export function createVoiceExtension({
         throw new Error(message);
       }
       return response;
+    }
+
+    async function register(ctx, signal) {
+      await request("/api/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: sessionId, label: ctx.cwd }),
+        signal,
+      });
+    }
+
+    async function renewRegistration(ctx, signal) {
+      while (!signal.aborted) {
+        await delay(registrationIntervalMs, signal);
+        if (signal.aborted) return;
+        try {
+          await register(ctx, signal);
+        } catch {
+          if (!signal.aborted) ctx.ui.setStatus("voice-input", "voice: error");
+        }
+      }
     }
 
     async function poll(ctx, signal) {
@@ -97,14 +118,10 @@ export function createVoiceExtension({
       controller = new AbortController();
       interactiveContext = ctx;
       try {
-        await request("/api/sessions", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ id: sessionId, label: ctx.cwd }),
-          signal: controller.signal,
-        });
+        await register(ctx, controller.signal);
         ctx.ui.setStatus("voice-input", "voice: ready");
         void poll(ctx, controller.signal);
+        void renewRegistration(ctx, controller.signal);
       } catch (error) {
         if (!controller.signal.aborted) {
           ctx.ui.setStatus("voice-input", "voice: error");
