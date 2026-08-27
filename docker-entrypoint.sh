@@ -20,7 +20,9 @@ if [ -n "${GIT_AUTHOR_EMAIL:-}" ]; then
   git config --global user.email "$GIT_AUTHOR_EMAIL"
 fi
 
-mkdir -p /root/.config
+mkdir -p /root/.config /root/.ssh /root/.pi/agent/extensions
+chmod 700 /root/.ssh
+ln -sfn /pi_agent/voice-input/extension.js /root/.pi/agent/extensions/voice-input.js
 rm -f /root/.bashrc
 rm -rf /root/.config/nvim /root/.config/tmux
 ln -s /pi_agent/dotfiles/bash/bashrc /root/.bashrc

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pi Voice</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { display: grid; min-height: 100vh; margin: 0; place-items: center; background: #101214; color: #f3f5f7; }
+    main { width: min(28rem, calc(100% - 2rem)); text-align: center; }
+    h1 { font-size: 1.4rem; font-weight: 600; }
+    button { border: 0; border-radius: 999px; padding: 1rem 1.4rem; background: #70d6a5; color: #092117; cursor: pointer; font: inherit; font-weight: 700; }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    #toggle { display: none; margin-left: .5rem; }
+    #status { min-height: 1.5rem; color: #aeb8c2; }
+    .recording { color: #ff8b8b !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Pi Voice</h1>
+    <p id="status">Connecting…</p>
+    <button id="enable" disabled>Enable microphone</button>
+    <button id="toggle">Start recording</button>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

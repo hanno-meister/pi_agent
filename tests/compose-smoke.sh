@@ -32,7 +32,7 @@ tar -C "$root" \
 env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
   "${compose[@]}" -p "$project" up --build --detach
 
-[ "$("${compose[@]}" -p "$project" ps --status running --services)" = "pi" ]
+[ "$("${compose[@]}" -p "$project" ps --status running --services | sort)" = "$(printf 'pi\nvoice-gateway')" ]
 "${compose[@]}" -p "$project" exec -T pi bash -lc 'test -n "$BASH_VERSION"'
 "${compose[@]}" -p "$project" exec -T pi test -L /root/.bashrc
 "${compose[@]}" -p "$project" exec -T pi test -L /root/.config/nvim
@@ -80,6 +80,9 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
 
 # Exercise two concurrent mini TUIs against shared, throwaway XDG roots.
 "${compose[@]}" -p "$project" exec -T pi bash /pi_agent/tests/code-mini-tmux-smoke.sh
+"${compose[@]}" -p "$project" exec -T pi test -L /root/.pi/agent/extensions/voice-input.js
+"${compose[@]}" -p "$project" exec -T voice-gateway node -e \
+  "fetch('http://127.0.0.1:4317/health').then(r => { if (!r.ok) process.exit(1) })"
 
 # pimatt explicitly adds its profile resources but leaves native skill discovery
 # enabled, allowing skills in the current project to compose with the profile.
