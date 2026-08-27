@@ -329,3 +329,39 @@ test("the extension does not start gateway work outside interactive mode", async
   assert.equal(fetched, false);
   assert.deepEqual(notifications, ["Voice input requires interactive mode"]);
 });
+
+test("the extension shows provider recovery errors without retrying transcription", async () => {
+  let delivered = false;
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url).endsWith("/api/sessions") && options.method === "POST") {
+      return response(201, { registered: true });
+    }
+    if (String(url).endsWith("/next") && !delivered) {
+      delivered = true;
+      return response(200, {
+        type: "error",
+        message: "Voice transcription failed; check OpenAI access and try again",
+      });
+    }
+    if (String(url).endsWith("/next")) return response(204);
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  const pi = fakePi();
+  const notifications = [];
+  const statuses = [];
+  const context = {
+    cwd: "/workspace/project",
+    mode: "tui",
+    ui: {
+      notify(message) { notifications.push(message); },
+      pasteToEditor() {},
+      setStatus(_name, value) { statuses.push(value); },
+    },
+  };
+  createVoiceExtension({ fetchImpl, gatewayUrl: "http://gateway.test" })(pi);
+  await pi.events.get("session_start")({}, context);
+  await eventually(() => notifications.length === 1);
+  assert.deepEqual(notifications, ["Voice transcription failed; check OpenAI access and try again"]);
+  assert.equal(statuses.at(-1), "voice: error");
+  await pi.events.get("session_shutdown")({}, context);
+});

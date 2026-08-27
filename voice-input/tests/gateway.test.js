@@ -27,18 +27,25 @@ async function register(gatewayUrl, id, config) {
   });
 }
 
+const recorderCredentials = new Map();
+
 async function connectRecorder(gatewayUrl, recorderId) {
   const events = await fetch(
     `${gatewayUrl}/api/browser/events?id=${encodeURIComponent(recorderId)}`,
   );
   assert.equal(events.status, 200);
+  const csrf = await fetch(`${gatewayUrl}/api/browser/csrf`);
+  recorderCredentials.set(recorderId, {
+    origin: gatewayUrl,
+    token: (await csrf.json()).token,
+  });
   return events;
 }
 
 async function acquireLease(gatewayUrl, recorderId, takeover = false) {
   return fetch(`${gatewayUrl}/api/browser/lease`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: recorderHeaders(recorderId, { "content-type": "application/json" }),
     body: JSON.stringify({ id: recorderId, takeover }),
   });
 }
@@ -52,13 +59,18 @@ async function readSseEvent(response, expectedEvent) {
     if (done) break;
     body += decoder.decode(value, { stream: true });
   }
-  await reader.cancel();
   assert.equal(body.match(/^event: (.+)$/m)?.[1], expectedEvent);
   return JSON.parse(body.match(/^data: (.+)$/m)?.[1] ?? "null");
 }
 
 function recorderHeaders(recorderId, extra = {}) {
-  return { "x-recorder-id": recorderId, ...extra };
+  const credentials = recorderCredentials.get(recorderId);
+  return {
+    "x-csrf-token": credentials?.token,
+    "x-recorder-id": recorderId,
+    origin: credentials?.origin,
+    ...extra,
+  };
 }
 
 test("concurrent sessions cannot stop, duplicate, or receive another session's recording", async (t) => {
@@ -322,4 +334,93 @@ test("stale session registrations expire while renewed sessions remain live", as
   });
   assert.deepEqual(await fallback.json(), { state: "recording" });
   assert.equal((await readSseEvent(events, "recording-start")).sessionId, "live-session");
+});
+
+test("recorder disconnect cancels an active recording", async (t) => {
+  const gateway = createVoiceGateway({ apiKey: "test-key" });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "session-a");
+  const events = await connectRecorder(gatewayUrl, "disconnecting-recorder");
+  await acquireLease(gatewayUrl, "disconnecting-recorder");
+  assert.deepEqual(await (await fetch(`${gatewayUrl}/api/sessions/session-a/toggle`, {
+    method: "POST",
+  })).json(), { state: "recording" });
+  await events.body.cancel();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+
+  await connectRecorder(gatewayUrl, "disconnecting-recorder");
+  await acquireLease(gatewayUrl, "disconnecting-recorder");
+  assert.deepEqual(await (await fetch(`${gatewayUrl}/api/sessions/session-a/toggle`, {
+    method: "POST",
+  })).json(), { state: "recording" });
+});
+
+test("a stale target is never rerouted and recovers only in the recorder", async (t) => {
+  let now = 0;
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    now: () => now,
+    sessionTtlMs: 10,
+    fetchImpl: async () => new Response(JSON.stringify({ text: "copy this" }), {
+      headers: { "content-type": "application/json" },
+    }),
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "vanishing-session");
+  const events = await connectRecorder(gatewayUrl, "recovery-recorder");
+  await acquireLease(gatewayUrl, "recovery-recorder");
+  await fetch(`${gatewayUrl}/api/sessions/vanishing-session/toggle`, { method: "POST" });
+  now = 11;
+
+  const reader = events.body.getReader();
+  const decoder = new TextDecoder();
+  let body = "";
+  while ((body.match(/^event:/gm) ?? []).length < 1) {
+    const { value } = await reader.read();
+    body += decoder.decode(value, { stream: true });
+  }
+  const recordingId = JSON.parse(body.match(/event: recording-start\ndata: (.+)/)?.[1] ?? "null").recordingId;
+  const recoveryUpload = await fetch(`${gatewayUrl}/api/recordings/${recordingId}`, {
+    method: "POST",
+    headers: recorderHeaders("recovery-recorder", { "content-type": "audio/webm" }),
+    body: Buffer.from("audio"),
+  });
+  assert.equal(recoveryUpload.status, 200);
+  while (!body.includes("event: recording-recovery")) {
+    const { value } = await reader.read();
+    body += decoder.decode(value, { stream: true });
+  }
+  assert.match(body, /event: recording-recovery\ndata: {"text":"copy this"}/);
+  assert.equal((await fetch(`${gatewayUrl}/api/sessions/vanishing-session/next`)).status, 404);
+});
+
+test("browser mutations require same-origin CSRF credentials", async (t) => {
+  const gateway = createVoiceGateway({ apiKey: "test-key" });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  const hostile = await fetch(`${gatewayUrl}/api/browser/lease`, {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "https://evil.test" },
+    body: JSON.stringify({ id: "attacker" }),
+  });
+  assert.equal(hostile.status, 403);
+
+  const missingToken = await fetch(`${gatewayUrl}/api/browser/lease`, {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: gatewayUrl },
+    body: JSON.stringify({ id: "attacker" }),
+  });
+  assert.equal(missingToken.status, 403);
+
+  const unsupportedContent = await fetch(`${gatewayUrl}/api/browser/lease`, {
+    method: "POST",
+    headers: { "content-type": "text/plain", origin: gatewayUrl },
+    body: "not json",
+  });
+  assert.equal(unsupportedContent.status, 415);
 });

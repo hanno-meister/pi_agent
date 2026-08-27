@@ -86,6 +86,10 @@ export function createVoiceExtension({
               ctx.ui.pasteToEditor(event.text);
               ctx.ui.setStatus("voice-input", "voice: ready");
             }
+            if (event.type === "error" && typeof event.message === "string") {
+              ctx.ui.setStatus("voice-input", "voice: error");
+              ctx.ui.notify(event.message, "error");
+            }
           }
           await delay(response.status === 204 ? 250 : 0, signal);
         } catch (error) {

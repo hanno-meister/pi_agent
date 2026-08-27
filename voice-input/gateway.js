@@ -40,8 +40,15 @@ async function readBody(request, maxBytes, limitMessage) {
 }
 
 async function readJson(request) {
-  const body = await readBody(request);
-  return JSON.parse(body.toString("utf8"));
+  if (!request.headers["content-type"]?.startsWith("application/json")) {
+    throw new RequestError(415, "Expected application/json");
+  }
+  const body = await readBody(request, 16_384, "Request body is too large");
+  try {
+    return JSON.parse(body.toString("utf8"));
+  } catch {
+    throw new RequestError(400, "Malformed JSON request");
+  }
 }
 
 async function serveAsset(response, name, contentType) {
@@ -65,9 +72,11 @@ async function transcribe(audio, contentType, options) {
     headers: { authorization: `Bearer ${options.apiKey}` },
     body: form,
   });
-  if (!response.ok) throw new Error(`Transcription failed (${response.status})`);
+  if (!response.ok) throw new Error("Voice transcription failed; check OpenAI access and try again");
   const result = await response.json();
-  if (typeof result.text !== "string") throw new Error("Transcription response had no text");
+  if (typeof result.text !== "string") {
+    throw new Error("Voice transcription failed; check OpenAI access and try again");
+  }
   return result.text;
 }
 
@@ -81,6 +90,7 @@ export function createVoiceGateway(overrides = {}) {
     pollTimeoutMs: overrides.pollTimeoutMs ?? 25_000,
     recorderLeaseTtlMs: overrides.recorderLeaseTtlMs ?? 15_000,
     sessionTtlMs: overrides.sessionTtlMs ?? 15_000,
+    csrfTtlMs: overrides.csrfTtlMs ?? 10 * 60_000,
     transcriptionUrl: overrides.transcriptionUrl ?? defaultTranscriptionUrl,
     uploadBytesPerSecond:
       overrides.uploadBytesPerSecond ?? defaultUploadBytesPerSecond,
@@ -95,6 +105,7 @@ export function createVoiceGateway(overrides = {}) {
   };
   const sessions = new Map();
   const recorderConnections = new Map();
+  const csrfTokens = new Map();
   let recorderLease;
   let activeRecording;
 
@@ -116,6 +127,33 @@ export function createVoiceGateway(overrides = {}) {
       recorderLease = undefined;
     }
     return recorderLease;
+  }
+
+  function issueCsrfToken() {
+    const token = randomUUID();
+    csrfTokens.set(token, options.now() + options.csrfTtlMs);
+    return token;
+  }
+
+  function requireBrowserRequest(request) {
+    const origin = request.headers.origin;
+    const expectedOrigin = `http://${request.headers.host}`;
+    const token = request.headers["x-csrf-token"];
+    const expiresAt = csrfTokens.get(token);
+    if (origin !== expectedOrigin || !expiresAt || expiresAt <= options.now()) {
+      throw new RequestError(403, "Browser request was rejected");
+    }
+    csrfTokens.delete(token);
+    csrfTokens.set(token, options.now() + options.csrfTtlMs);
+  }
+
+  function cancelRecording(recording) {
+    if (activeRecording !== recording) return false;
+    activeRecording = undefined;
+    sendRecorderEvent(recording.recorderId, "recording-cancelled", {
+      recordingId: recording.id,
+    });
+    return true;
   }
 
   function sendRecorderEvent(recorderId, event, data) {
@@ -150,6 +188,10 @@ export function createVoiceGateway(overrides = {}) {
       return;
     }
     if (!activeRecording) {
+      if (!options.apiKey) {
+        json(response, 503, { error: "Voice transcription unavailable: set OPENAI_API_KEY" });
+        return;
+      }
       const lease = currentRecorderLease();
       if (!lease || !recorderIsAvailable()) {
         json(response, 409, { error: "Open the voice page and enable the microphone" });
@@ -252,6 +294,10 @@ export function createVoiceGateway(overrides = {}) {
         json(response, 201, { registered: true });
         return;
       }
+      if (request.method === "GET" && url.pathname === "/api/browser/csrf") {
+        json(response, 200, { token: issueCsrfToken() });
+        return;
+      }
       if (request.method === "GET" && url.pathname === "/api/browser/events") {
         const recorderId = url.searchParams.get("id");
         if (!recorderId) {
@@ -270,12 +316,14 @@ export function createVoiceGateway(overrides = {}) {
         request.on("close", () => {
           if (recorderConnections.get(recorderId) === response) {
             recorderConnections.delete(recorderId);
+            if (activeRecording?.recorderId === recorderId) cancelRecording(activeRecording);
           }
         });
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/browser/lease") {
         const input = await readJson(request);
+        requireBrowserRequest(request);
         if (typeof input.id !== "string" || input.id.length === 0) {
           json(response, 400, { error: "Recorder id is required" });
           return;
@@ -305,6 +353,7 @@ export function createVoiceGateway(overrides = {}) {
         return;
       }
       if (request.method === "POST" && url.pathname === "/api/browser/toggle") {
+        requireBrowserRequest(request);
         const lease = currentRecorderLease();
         if (!lease || request.headers["x-recorder-id"] !== lease.recorderId) {
           json(response, 409, { error: "Browser does not hold the recorder lease" });
@@ -356,7 +405,23 @@ export function createVoiceGateway(overrides = {}) {
         return;
       }
       const recordingMatch = url.pathname.match(/^\/api\/recordings\/([^/]+)$/);
+      if (request.method === "DELETE" && recordingMatch) {
+        requireBrowserRequest(request);
+        const recording = activeRecording;
+        if (
+          !recording ||
+          recording.id !== decodeURIComponent(recordingMatch[1]) ||
+          recording.recorderId !== request.headers["x-recorder-id"]
+        ) {
+          json(response, 409, { error: "Recording is not active" });
+          return;
+        }
+        cancelRecording(recording);
+        json(response, 200, { cancelled: true });
+        return;
+      }
       if (request.method === "POST" && recordingMatch) {
+        requireBrowserRequest(request);
         const recordingId = decodeURIComponent(recordingMatch[1]);
         const recording = activeRecording;
         if (
@@ -367,6 +432,9 @@ export function createVoiceGateway(overrides = {}) {
         ) {
           json(response, 409, { error: "Recording is not awaiting audio" });
           return;
+        }
+        if (!request.headers["content-type"]?.startsWith("audio/")) {
+          throw new RequestError(415, "Expected an audio upload");
         }
         recording.state = "processing";
         try {
@@ -382,25 +450,32 @@ export function createVoiceGateway(overrides = {}) {
             ...options,
             ...recording.config,
           });
-          deliverToSession(recording.ownerSessionId, { type: "transcript", text });
+          pruneSessions();
+          const delivered = deliverToSession(recording.ownerSessionId, { type: "transcript", text });
           if (activeRecording === recording) activeRecording = undefined;
-          sendRecorderEvent(recording.recorderId, "recording-complete", {
-            recordingId: recording.id,
-            sessionId: recording.ownerSessionId,
-          });
+          if (delivered) {
+            sendRecorderEvent(recording.recorderId, "recording-complete", {
+              recordingId: recording.id,
+              sessionId: recording.ownerSessionId,
+            });
+          } else {
+            sendRecorderEvent(recording.recorderId, "recording-recovery", { text });
+          }
           json(response, 200, { transcribed: true });
         } catch (error) {
           if (activeRecording === recording) activeRecording = undefined;
-          sendRecorderEvent(recording.recorderId, "recording-error", {
-            message: error.message,
-          });
+          const message = error.status
+            ? error.message
+            : "Voice transcription failed; check OpenAI access and try again";
+          deliverToSession(recording.ownerSessionId, { type: "error", message });
+          sendRecorderEvent(recording.recorderId, "recording-error", { message });
           json(response, error.status ?? 500, { error: error.message });
         }
         return;
       }
       json(response, 404, { error: "Not found" });
     } catch (error) {
-      json(response, 500, { error: error.message });
+      json(response, error.status ?? 500, { error: error.message });
     }
   });
 }

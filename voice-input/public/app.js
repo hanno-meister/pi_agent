@@ -4,8 +4,10 @@ const status = document.querySelector("#status");
 const enable = document.querySelector("#enable");
 const takeover = document.querySelector("#takeover");
 const toggle = document.querySelector("#toggle");
+const recovery = document.querySelector("#recovery");
 
 const recorderId = crypto.randomUUID();
+let csrfToken;
 let armed = false;
 let recorder;
 let stream;
@@ -13,14 +15,27 @@ let chunks = [];
 let recordingId;
 let leaseTimer;
 let recordingTimer;
+let discardRecording = false;
 
 function show(message, state = "") {
   status.textContent = message;
   status.className = state;
 }
 
+async function browserFetch(path, options = {}) {
+  if (!csrfToken) {
+    const tokenResponse = await fetch("/api/browser/csrf");
+    if (!tokenResponse.ok) throw new Error("Could not secure browser request");
+    csrfToken = (await tokenResponse.json()).token;
+  }
+  return fetch(path, {
+    ...options,
+    headers: { ...options.headers, "x-csrf-token": csrfToken },
+  });
+}
+
 async function claimLease(takeoverLease = false) {
-  const response = await fetch("/api/browser/lease", {
+  const response = await browserFetch("/api/browser/lease", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ id: recorderId, takeover: takeoverLease }),
@@ -69,6 +84,8 @@ async function startRecording(targetRecordingId, maxDurationSeconds) {
     return;
   }
   recordingId = targetRecordingId;
+  discardRecording = false;
+  recovery.value = "";
   stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   chunks = [];
   recorder = new MediaRecorder(stream, {
@@ -101,8 +118,9 @@ function stopRecording(eventRecordingId) {
 async function uploadRecording() {
   const completedRecordingId = recordingId;
   try {
+    if (discardRecording) return;
     const audio = new Blob(chunks, { type: "audio/webm;codecs=opus" });
-    const response = await fetch(
+    const response = await browserFetch(
       `/api/recordings/${encodeURIComponent(completedRecordingId)}`,
       {
         method: "POST",
@@ -126,8 +144,23 @@ async function uploadRecording() {
   }
 }
 
+function discardActiveRecording() {
+  if (!recordingId || recorder?.state !== "recording") return;
+  const cancelledRecordingId = recordingId;
+  discardRecording = true;
+  clearTimeout(recordingTimer);
+  recorder.stop();
+  stream?.getTracks().forEach((track) => track.stop());
+  void browserFetch(`/api/recordings/${encodeURIComponent(cancelledRecordingId)}`, {
+    method: "DELETE",
+    headers: { "x-recorder-id": recorderId },
+  });
+  toggle.textContent = "Start recording";
+  show("Recording cancelled");
+}
+
 async function browserToggle() {
-  const response = await fetch("/api/browser/toggle", {
+  const response = await browserFetch("/api/browser/toggle", {
     method: "POST",
     headers: { "x-recorder-id": recorderId },
   });
@@ -164,5 +197,17 @@ events.addEventListener("recording-stop", (event) => {
   stopRecording(JSON.parse(event.data).recordingId);
 });
 events.addEventListener("recording-complete", () => show("Inserted into Pi draft"));
+events.addEventListener("recording-cancelled", () => discardActiveRecording());
+events.addEventListener("recording-recovery", (event) => {
+  recovery.value = JSON.parse(event.data).text;
+  show("Pi session ended — copy the recovered transcript");
+});
 events.addEventListener("recording-error", (event) => show(JSON.parse(event.data).message));
-events.addEventListener("error", () => show("Gateway connection lost"));
+events.addEventListener("error", () => {
+  discardActiveRecording();
+  show("Gateway connection lost");
+});
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") discardActiveRecording();
+});
+window.addEventListener("pagehide", () => discardActiveRecording());
