@@ -1,0 +1,19 @@
+# OpenCode installs plugin dependencies in its config directory.
+node_modules/
+package.json
+package-lock.json
+bun.lock
+bun.lockb
+
+# OMO Slim runtime reconciliation metadata.
+.oh-my-opencode-slim/
+
+# OMO Slim bundled skills are package-managed. Other skills are manually installed.
+skills/codemap/
+skills/clonedeps/
+skills/deepwork/
+skills/verification-planning/
+skills/simplify/
+skills/worktrees/
+skills/reflect/
+skills/oh-my-opencode-slim/

@@ -17,6 +17,9 @@ services:
     volumes:
       - .:/pi_agent
       - pi-agent:/root/.pi/agent
+      - opencode-data:/root/.local/share/opencode
+      - opencode-cache:/root/.cache/opencode
+      - opencode-state:/root/.local/state/opencode
       - ssh-data:/root/.ssh
       - nvim-data:/root/.local/share/nvim
       - nvim-cache:/root/.cache/nvim
@@ -25,6 +28,9 @@ services:
 
 volumes:
   pi-agent:
+  opencode-data:
+  opencode-cache:
+  opencode-state:
   ssh-data:
   nvim-data:
   nvim-cache:

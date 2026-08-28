@@ -52,7 +52,8 @@ RUN set -eux; \
 # Newer CLI binaries require a newer glibc than Debian Bookworm provides.
 RUN npm install --global tree-sitter-cli@0.25.10 \
     && npm install --global --ignore-scripts \
-        @earendil-works/pi-coding-agent
+        @earendil-works/pi-coding-agent@0.84.3 \
+    && npm install --global opencode-ai@1.18.25
 
 RUN python3 -m pip install \
     --no-cache-dir \
@@ -60,9 +61,10 @@ RUN python3 -m pip install \
     graphifyy
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-COPY pi_agent_profiles/pimatt/pimatt /usr/local/bin/pimatt
-COPY pi_agent_profiles/pibrain/pibrain /usr/local/bin/pibrain
-RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh /usr/local/bin/pimatt /usr/local/bin/pibrain
+COPY agent_profiles/pimatt/pimatt /usr/local/bin/pimatt
+COPY agent_profiles/pibrain/pibrain /usr/local/bin/pibrain
+COPY agent_profiles/code/code /usr/local/bin/code
+RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh /usr/local/bin/pimatt /usr/local/bin/pibrain /usr/local/bin/code
 
 WORKDIR /pi_agent/workspaces
 

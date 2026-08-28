@@ -4,6 +4,13 @@ set -eu
 # Install into the runtime-mounted Pi configuration volume.
 graphify install --platform pi
 
+# The repository is mounted after the image is built. Keep the runtime launcher
+# synchronized with the mounted source instead of using a stale image copy.
+if [ -f /pi_agent/agent_profiles/code/code ]; then
+  cp /pi_agent/agent_profiles/code/code /usr/local/bin/code
+  chmod 0755 /usr/local/bin/code
+fi
+
 git config --global --replace-all safe.directory /pi_agent
 
 if [ -n "${GIT_AUTHOR_NAME:-}" ]; then
