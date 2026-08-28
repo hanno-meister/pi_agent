@@ -52,8 +52,8 @@ RUN set -eux; \
 # Newer CLI binaries require a newer glibc than Debian Bookworm provides.
 RUN npm install --global tree-sitter-cli@0.25.10 \
     && npm install --global --ignore-scripts \
-        @earendil-works/pi-coding-agent \
-    && npm install --global opencode-ai@latest
+        @earendil-works/pi-coding-agent@0.84.3 \
+    && npm install --global opencode-ai@1.18.25
 
 RUN python3 -m pip install \
     --no-cache-dir \

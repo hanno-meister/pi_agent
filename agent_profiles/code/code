@@ -8,14 +8,69 @@ if [ ! -d "$profile/opencode" ]; then
   exit 1
 fi
 
-# Make this profile the scoped OpenCode global config. Project configuration is
-# still loaded later by OpenCode and can override these defaults.
-export XDG_CONFIG_HOME="$profile"
-unset OPENCODE_CONFIG OPENCODE_CONFIG_DIR OPENCODE_CONFIG_CONTENT
+# Make this profile the scoped OpenCode config. Project configuration loads
+# first; conflicting profile settings override it.
+export OPENCODE_CONFIG_DIR="$profile/opencode"
+unset OPENCODE_CONFIG OPENCODE_CONFIG_CONTENT
 unset OPENCODE_TUI_CONFIG OPENCODE_DISABLE_PROJECT_CONFIG
 
 # OMO Slim's background scheduler and web search are profile-only settings.
 export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
 export OPENCODE_ENABLE_EXA=1
+
+is_tui=true
+case "${1-}" in
+  acp|agent|attach|completion|db|export|github|import|mcp|models|plugin|pr|providers|run|serve|session|stats|uninstall|upgrade|web)
+    is_tui=false
+    ;;
+esac
+
+if [ "$is_tui" = true ]; then
+  port=
+  port_arg_pending=false
+  for arg in "$@"; do
+    if [ "$port_arg_pending" = true ]; then
+      port=$arg
+      port_arg_pending=false
+      continue
+    fi
+    case "$arg" in
+      --port)
+        port_arg_pending=true
+        ;;
+      --port=*)
+        port=${arg#--port=}
+        ;;
+    esac
+  done
+
+  if [ -z "$port" ]; then
+    if [ -n "${OPENCODE_PORT:-}" ]; then
+      port=$OPENCODE_PORT
+    else
+      port=$(python3 - <<'PY'
+import random
+import socket
+
+for _ in range(100):
+    candidate = random.randint(49152, 65535)
+    with socket.socket() as sock:
+        try:
+            sock.bind(("127.0.0.1", candidate))
+        except OSError:
+            continue
+        print(candidate)
+        break
+else:
+    raise SystemExit("unable to find a free OpenCode port")
+PY
+)
+    fi
+    export OPENCODE_PORT=$port
+    set -- --port "$port" "$@"
+  else
+    export OPENCODE_PORT=$port
+  fi
+fi
 
 exec opencode "$@"

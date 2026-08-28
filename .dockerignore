@@ -1,0 +1,13 @@
+# The Dockerfile only copies these launcher files. Exclude everything else,
+# including secrets, repository metadata, workspaces, and generated artifacts.
+*
+!Dockerfile
+!.dockerignore
+!docker-entrypoint.sh
+!agent_profiles/
+!agent_profiles/code/
+!agent_profiles/code/code
+!agent_profiles/pibrain/
+!agent_profiles/pibrain/pibrain
+!agent_profiles/pimatt/
+!agent_profiles/pimatt/pimatt

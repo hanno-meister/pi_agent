@@ -1,7 +1,7 @@
 {
-  "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@2.2.17/oh-my-opencode-slim.schema.json",
   "preset": "openai",
-  "autoUpdate": true,
+  "autoUpdate": false,
 
   "multiplexer": {
     "type": "tmux",

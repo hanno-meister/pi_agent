@@ -11,12 +11,23 @@ cd /pi_agent/workspaces/projects/<repository>
 code
 ```
 
-`code` is a global launcher for OpenCode. It scopes the profile through
-`XDG_CONFIG_HOME`, enables OMO Slim background subagents and Exa search, then
-forwards all arguments to `opencode`. Plain `opencode` is unchanged.
+`code` is a global launcher for OpenCode. It scopes configuration to
+`/pi_agent/agent_profiles/code/opencode` through `OPENCODE_CONFIG_DIR`, enables
+OMO Slim background subagents and Exa search, then forwards all arguments to
+`opencode`. Plain `opencode` is unchanged.
 
-Project `opencode.json`, `.opencode/`, agents, skills, and instructions remain
-higher-precedence project configuration.
+Only configuration is profile-scoped. OpenCode's runtime, authentication,
+session, database, and cache state remain native/shared; this launcher does not
+create per-pane directories or copy auth and preference files.
+
+Project `opencode.json` and `.opencode/` configuration load before the profile
+directory. When settings conflict, profile configuration wins; project agents,
+skills, and instructions remain available.
+
+Interactive `code` launches choose a free high localhost port and pass matching
+`--port`/`OPENCODE_PORT` values so OMO can attach agent panes. Set
+`OPENCODE_PORT` or pass `--port` to override it. Non-interactive subcommands do
+not open a server port.
 
 ## Profile layout
 
@@ -68,9 +79,10 @@ provider exposes different IDs.
 
 ## Updates
 
-- OpenCode: rebuild the image to retrieve `opencode-ai@latest`.
-- OMO Slim: loaded as `@latest`; its updater and OpenCode cache determine when a
-  new package is resolved.
+- OpenCode and Pi: versions are pinned in `Dockerfile`; update them there and
+  rebuild the image deliberately.
+- OMO Slim: version `2.2.17` is pinned in the profile config and automatic
+  updates are disabled; update the plugin and schema versions deliberately.
 - Manually installed skills: from this directory, update with
   `npx skills@latest update -p` when desired and review the resulting profile
   changes.
