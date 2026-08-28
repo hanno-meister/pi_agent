@@ -81,6 +81,31 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
 # Exercise two concurrent mini TUIs against shared, throwaway XDG roots.
 "${compose[@]}" -p "$project" exec -T pi bash /pi_agent/tests/code-mini-tmux-smoke.sh
 "${compose[@]}" -p "$project" exec -T pi test -L /root/.pi/agent/extensions/voice-input.js
+"${compose[@]}" -p "$project" exec -T pi sh -c '\
+  set -e; \
+  node -e '"'"'
+    const { spawnSync } = require("node:child_process");
+    const result = spawnSync("pi", ["--mode", "rpc"], {
+      input: "{\"type\":\"get_commands\"}\n",
+      encoding: "utf8",
+    });
+    if (result.error) throw result.error;
+    if (result.status !== 0) process.exit(result.status || 1);
+    const messages = result.stdout.split(/\r?\n/).filter(Boolean).map(JSON.parse);
+    const response = messages.find((message) =>
+      message.type === "response" && message.command === "get_commands",
+    );
+    const commands = response?.data?.commands;
+    if (
+      !response?.success ||
+      !Array.isArray(commands) ||
+      !["voice", "voice-setup"].every((name) =>
+        commands.some((command) => command.name === name),
+      )
+    ) {
+      process.exit(1);
+    }
+  '"'"''
 "${compose[@]}" -p "$project" exec -T voice-gateway node -e \
   "fetch('http://127.0.0.1:4317/health').then(async r => { const health = await r.json(); if (!r.ok || health.status !== 'unconfigured' || health.action !== 'Set OPENAI_API_KEY to enable transcription') process.exit(1) })"
 "${compose[@]}" -p "$project" port voice-gateway 4317 | grep -Ex '127\.0\.0\.1:[0-9]+'

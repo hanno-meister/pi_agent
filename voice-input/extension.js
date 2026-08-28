@@ -24,6 +24,8 @@ export function createVoiceExtension({
   fetchImpl = fetch,
   gatewayUrl = defaultGatewayUrl,
   registrationIntervalMs = 5000,
+  registrationRetryBaseMs = 100,
+  registrationRetryMaxMs = 2000,
   ...configOverrides
 } = {}) {
   const defaultConfig = resolveVoiceConfig(configOverrides);
@@ -32,6 +34,8 @@ export function createVoiceExtension({
     let config = { ...defaultConfig };
     let controller;
     let interactiveContext;
+    let activeSession;
+    let registrationQueue = Promise.resolve();
 
     async function request(path, options = {}) {
       const response = await fetchImpl(`${gatewayUrl}${path}`, options);
@@ -61,16 +65,81 @@ export function createVoiceExtension({
       });
     }
 
+    function enqueueRegistration(
+      ctx,
+      signal,
+      registrationConfig,
+      canAttempt = () => true,
+      onSuccess,
+    ) {
+      const queued = registrationQueue.then(async () => {
+        if (signal?.aborted || !canAttempt()) return false;
+        await register(
+          ctx,
+          signal,
+          typeof registrationConfig === "function"
+            ? registrationConfig()
+            : registrationConfig,
+        );
+        onSuccess?.();
+        return true;
+      });
+      registrationQueue = queued.catch(() => {});
+      return queued;
+    }
+
+    async function registerWithRetry(ctx, signal, session) {
+      let retryDelayMs = registrationRetryBaseMs;
+      let reportedFailure = false;
+      while (!signal.aborted) {
+        try {
+          const registered = await enqueueRegistration(
+            ctx,
+            signal,
+            session.registrationConfig,
+            () => session.registrationOperation.active,
+          );
+          if (registered) return true;
+          return false;
+        } catch (error) {
+          if (signal.aborted) return false;
+          ctx.ui.setStatus("voice-input", "voice: error");
+          if (!reportedFailure) {
+            const message = error instanceof Error ? error.message : String(error);
+            ctx.ui.notify(message, "error");
+            reportedFailure = true;
+          }
+          await delay(retryDelayMs, signal);
+          retryDelayMs = Math.min(retryDelayMs * 2, registrationRetryMaxMs);
+        }
+      }
+      return false;
+    }
+
     async function renewRegistration(ctx, signal) {
       while (!signal.aborted) {
         await delay(registrationIntervalMs, signal);
         if (signal.aborted) return;
         try {
-          await register(ctx, signal);
+          await enqueueRegistration(ctx, signal, () => config);
         } catch {
           if (!signal.aborted) ctx.ui.setStatus("voice-input", "voice: error");
         }
       }
+    }
+
+    function startBackgroundWork(ctx, session) {
+      if (
+        session.controller.signal.aborted ||
+        activeSession !== session ||
+        session.backgroundStarted
+      ) {
+        return;
+      }
+      session.backgroundStarted = true;
+      ctx.ui.setStatus("voice-input", "voice: ready");
+      void poll(ctx, session.controller.signal);
+      void renewRegistration(ctx, session.controller.signal);
     }
 
     async function poll(ctx, signal) {
@@ -136,9 +205,24 @@ export function createVoiceExtension({
         );
         if (!model) return;
         const selectedConfig = { ...config, model };
+        const session = activeSession;
+        const signal = session?.controller.signal;
         try {
-          await register(ctx, controller?.signal, selectedConfig);
-          config = selectedConfig;
+          const registered = await enqueueRegistration(
+            ctx,
+            signal,
+            selectedConfig,
+            () => !signal?.aborted,
+            () => {
+              if (session && activeSession !== session) return;
+              config = selectedConfig;
+              if (session) {
+                session.registrationOperation.active = false;
+                startBackgroundWork(ctx, session);
+              }
+            },
+          );
+          if (!registered) return;
           ctx.ui.notify(`Voice transcription model: ${model}`, "info");
         } catch (error) {
           ctx.ui.notify(error.message, "error");
@@ -151,26 +235,50 @@ export function createVoiceExtension({
       handler: async (ctx) => toggle(ctx),
     });
 
+    async function startSession(ctx, session) {
+      try {
+        const registered = await registerWithRetry(
+          ctx,
+          session.controller.signal,
+          session,
+        );
+        if (
+          !registered ||
+          session.controller.signal.aborted ||
+          activeSession !== session ||
+          !session.registrationOperation.active
+        ) {
+          return;
+        }
+        startBackgroundWork(ctx, session);
+      } catch (error) {
+        if (!session.controller.signal.aborted && activeSession === session) {
+          ctx.ui.setStatus("voice-input", "voice: error");
+          ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
+        }
+      }
+    }
+
     pi.on("session_start", async (_event, ctx) => {
       if (ctx.mode !== "tui") return;
       controller?.abort();
-      controller = new AbortController();
+      if (activeSession) activeSession.registrationOperation.active = false;
+      const sessionController = new AbortController();
+      controller = sessionController;
+      activeSession = {
+        controller: sessionController,
+        registrationConfig: { ...config },
+        registrationOperation: { active: true },
+        backgroundStarted: false,
+      };
       interactiveContext = ctx;
-      try {
-        await register(ctx, controller.signal);
-        ctx.ui.setStatus("voice-input", "voice: ready");
-        void poll(ctx, controller.signal);
-        void renewRegistration(ctx, controller.signal);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          ctx.ui.setStatus("voice-input", "voice: error");
-          ctx.ui.notify(error.message, "error");
-        }
-      }
+      void startSession(ctx, activeSession);
     });
 
     pi.on("session_shutdown", async () => {
       controller?.abort();
+      if (activeSession) activeSession.registrationOperation.active = false;
+      activeSession = undefined;
       interactiveContext?.ui.setStatus("voice-input", undefined);
       interactiveContext = undefined;
     });

@@ -9,6 +9,7 @@ const publicDirectory = fileURLToPath(new URL("./public/", import.meta.url));
 const defaultTranscriptionUrl = "https://api.openai.com/v1/audio/transcriptions";
 // Chrome targets 128 kbit/s Opus; this allows equal space again for WebM overhead.
 const defaultUploadBytesPerSecond = 32_000;
+const defaultTranscriptionTimeoutMs = 60_000;
 
 function json(response, status, value) {
   response.writeHead(status, { "content-type": "application/json" });
@@ -67,17 +68,39 @@ async function transcribe(audio, contentType, options) {
   form.append("model", options.model);
   form.append("language", options.language);
   form.append("file", new Blob([audio], { type: contentType }), "recording.webm");
-  const response = await options.fetchImpl(options.transcriptionUrl, {
-    method: "POST",
-    headers: { authorization: `Bearer ${options.apiKey}` },
-    body: form,
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  if (options.signal?.aborted) controller.abort();
+  else options.signal?.addEventListener("abort", cancel, { once: true });
+  let timeout;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeout = setTimeout(() => {
+      reject(new Error("Voice transcription failed; check OpenAI access and try again"));
+      controller.abort();
+    }, options.transcriptionTimeoutMs);
   });
-  if (!response.ok) throw new Error("Voice transcription failed; check OpenAI access and try again");
-  const result = await response.json();
-  if (typeof result.text !== "string") {
-    throw new Error("Voice transcription failed; check OpenAI access and try again");
+  try {
+    const transcription = (async () => {
+      const response = await options.fetchImpl(options.transcriptionUrl, {
+        method: "POST",
+        headers: { authorization: `Bearer ${options.apiKey}` },
+        body: form,
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error("Voice transcription failed; check OpenAI access and try again");
+      }
+      const result = await response.json();
+      if (typeof result.text !== "string") {
+        throw new Error("Voice transcription failed; check OpenAI access and try again");
+      }
+      return result.text;
+    })();
+    return await Promise.race([transcription, timeoutPromise]);
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener("abort", cancel);
   }
-  return result.text;
 }
 
 export function createVoiceGateway(overrides = {}) {
@@ -92,9 +115,14 @@ export function createVoiceGateway(overrides = {}) {
     sessionTtlMs: overrides.sessionTtlMs ?? 15_000,
     csrfTtlMs: overrides.csrfTtlMs ?? 10 * 60_000,
     transcriptionUrl: overrides.transcriptionUrl ?? defaultTranscriptionUrl,
+    transcriptionTimeoutMs:
+      overrides.transcriptionTimeoutMs ?? defaultTranscriptionTimeoutMs,
     uploadBytesPerSecond:
       overrides.uploadBytesPerSecond ?? defaultUploadBytesPerSecond,
   };
+  if (!Number.isFinite(options.transcriptionTimeoutMs) || options.transcriptionTimeoutMs <= 0) {
+    throw new Error("Transcription timeout must be a positive finite number");
+  }
   if (!Number.isInteger(options.uploadBytesPerSecond) || options.uploadBytesPerSecond < 1) {
     throw new Error("Upload bytes per second must be a positive integer");
   }
@@ -137,10 +165,35 @@ export function createVoiceGateway(overrides = {}) {
 
   function requireBrowserRequest(request) {
     const origin = request.headers.origin;
-    const expectedOrigin = `http://${request.headers.host}`;
+    const host = request.headers.host;
     const token = request.headers["x-csrf-token"];
     const expiresAt = csrfTokens.get(token);
-    if (origin !== expectedOrigin || !expiresAt || expiresAt <= options.now()) {
+    let originUrl;
+    let hostUrl;
+    try {
+      originUrl = new URL(origin);
+      hostUrl = new URL(`http://${host}`);
+    } catch {
+      throw new RequestError(403, "Browser request was rejected");
+    }
+    const loopbackHostnames = new Set(["localhost", "127.0.0.1", "[::1]"]);
+    if (
+      originUrl.origin !== origin ||
+      originUrl.protocol !== "http:" ||
+      originUrl.username ||
+      originUrl.password ||
+      originUrl.pathname !== "/" ||
+      originUrl.search ||
+      originUrl.hash ||
+      hostUrl.host !== host ||
+      hostUrl.pathname !== "/" ||
+      hostUrl.search ||
+      hostUrl.hash ||
+      !loopbackHostnames.has(hostUrl.hostname) ||
+      originUrl.host !== hostUrl.host ||
+      !expiresAt ||
+      expiresAt <= options.now()
+    ) {
       throw new RequestError(403, "Browser request was rejected");
     }
     csrfTokens.delete(token);
@@ -149,6 +202,9 @@ export function createVoiceGateway(overrides = {}) {
 
   function cancelRecording(recording) {
     if (activeRecording !== recording) return false;
+    recording.cancelled = true;
+    recording.state = "cancelled";
+    recording.cancellationController.abort();
     activeRecording = undefined;
     sendRecorderEvent(recording.recorderId, "recording-cancelled", {
       recordingId: recording.id,
@@ -199,6 +255,7 @@ export function createVoiceGateway(overrides = {}) {
       }
       const session = sessions.get(sessionId);
       activeRecording = {
+        cancellationController: new AbortController(),
         config: { ...session.config },
         id: randomUUID(),
         ownerSessionId: sessionId,
@@ -441,6 +498,17 @@ export function createVoiceGateway(overrides = {}) {
           throw new RequestError(415, "Expected an audio upload");
         }
         recording.state = "processing";
+        const cancelOnClientDisconnect = () => {
+          if (response.writableEnded) return;
+          if (activeRecording === recording && recording.state === "processing") {
+            cancelRecording(recording);
+          }
+        };
+        request.on("aborted", cancelOnClientDisconnect);
+        request.on("close", () => {
+          if (request.aborted) cancelOnClientDisconnect();
+        });
+        response.on("close", cancelOnClientDisconnect);
         try {
           const maxUploadBytes =
             recording.config.maxDurationSeconds * options.uploadBytesPerSecond;
@@ -453,7 +521,14 @@ export function createVoiceGateway(overrides = {}) {
           const text = await transcribe(audio, contentType, {
             ...options,
             ...recording.config,
+            signal: recording.cancellationController.signal,
           });
+          if (recording.cancelled) {
+            if (!response.writableEnded && !response.destroyed) {
+              json(response, 409, { error: "Recording was cancelled" });
+            }
+            return;
+          }
           pruneSessions();
           const delivered = deliverToSession(recording.ownerSessionId, { type: "transcript", text });
           if (activeRecording === recording) activeRecording = undefined;
@@ -468,6 +543,12 @@ export function createVoiceGateway(overrides = {}) {
           json(response, 200, { transcribed: true });
         } catch (error) {
           if (activeRecording === recording) activeRecording = undefined;
+          if (recording.cancelled) {
+            if (!response.writableEnded && !response.destroyed) {
+              json(response, 409, { error: "Recording was cancelled" });
+            }
+            return;
+          }
           const message = error.status
             ? error.message
             : "Voice transcription failed; check OpenAI access and try again";

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import test from "node:test";
 
 import { createVoiceGateway } from "../gateway.js";
@@ -17,6 +17,28 @@ async function close(server) {
   server.close();
   server.closeAllConnections?.();
   await closed;
+}
+
+async function requestStatus(gatewayUrl, path, options = {}) {
+  const target = new URL(gatewayUrl);
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(
+      {
+        hostname: "127.0.0.1",
+        method: options.method ?? "GET",
+        path,
+        port: target.port,
+        headers: options.headers,
+      },
+      (response) => {
+        response.resume();
+        response.on("end", () => resolve(response.statusCode));
+      },
+    );
+    request.on("error", reject);
+    if (options.body) request.write(options.body);
+    request.end();
+  });
 }
 
 async function register(gatewayUrl, id, config) {
@@ -52,6 +74,10 @@ async function acquireLease(gatewayUrl, recorderId, takeover = false) {
 
 async function readSseEvent(response, expectedEvent) {
   const reader = response.body.getReader();
+  return readSseEventFromReader(reader, expectedEvent);
+}
+
+async function readSseEventFromReader(reader, expectedEvent) {
   const decoder = new TextDecoder();
   let body = "";
   while (!body.includes("\n\n")) {
@@ -183,6 +209,181 @@ test("concurrent sessions cannot stop, duplicate, or receive another session's r
   assert.match(upstreamBody, /gpt-4o-transcribe/);
   assert.match(upstreamBody, /name="language"\r\n\r\nde/);
   assert.match(upstreamBody, /fake-webm-audio/);
+});
+
+test("transcription timeout releases a recording for a subsequent attempt", async (t) => {
+  let transcriptionSignal;
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    transcriptionTimeoutMs: 20,
+    fetchImpl: async (_url, options) => {
+      transcriptionSignal = options.signal;
+      return new Promise(() => {});
+    },
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "timeout-session");
+  const events = await connectRecorder(gatewayUrl, "timeout-recorder");
+  await acquireLease(gatewayUrl, "timeout-recorder");
+  await fetch(`${gatewayUrl}/api/sessions/timeout-session/toggle`, { method: "POST" });
+  const recording = await readSseEvent(events, "recording-start");
+
+  const stopEvents = await connectRecorder(gatewayUrl, "timeout-recorder");
+  await fetch(`${gatewayUrl}/api/sessions/timeout-session/toggle`, { method: "POST" });
+  await readSseEvent(stopEvents, "recording-stop");
+
+  const upload = await fetch(`${gatewayUrl}/api/recordings/${recording.recordingId}`, {
+    method: "POST",
+    headers: recorderHeaders("timeout-recorder", { "content-type": "audio/webm" }),
+    body: Buffer.from("audio"),
+  });
+  assert.equal(upload.status, 500);
+  assert.deepEqual(await upload.json(), {
+    error: "Voice transcription failed; check OpenAI access and try again",
+  });
+  assert.equal(transcriptionSignal.aborted, true);
+
+  const nextEvents = await connectRecorder(gatewayUrl, "timeout-recorder");
+  await acquireLease(gatewayUrl, "timeout-recorder");
+  const nextStart = await fetch(`${gatewayUrl}/api/sessions/timeout-session/toggle`, {
+    method: "POST",
+  });
+  assert.equal(nextStart.status, 200);
+  await readSseEvent(nextEvents, "recording-start");
+});
+
+test("cancelling processing aborts upstream work and suppresses late results", async (t) => {
+  let resolveTranscription;
+  let transcriptionSignal;
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    pollTimeoutMs: 200,
+    fetchImpl: async (_url, options) => {
+      transcriptionSignal = options.signal;
+      return new Promise((resolve) => {
+        resolveTranscription = resolve;
+      });
+    },
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "cancel-session");
+  const startEvents = await connectRecorder(gatewayUrl, "cancel-recorder");
+  await acquireLease(gatewayUrl, "cancel-recorder");
+  await fetch(`${gatewayUrl}/api/sessions/cancel-session/toggle`, { method: "POST" });
+  const recording = await readSseEvent(startEvents, "recording-start");
+
+  const events = await connectRecorder(gatewayUrl, "cancel-recorder");
+  const eventReader = events.body.getReader();
+  await fetch(`${gatewayUrl}/api/sessions/cancel-session/toggle`, { method: "POST" });
+  await readSseEventFromReader(eventReader, "recording-stop");
+
+  const delivery = fetch(`${gatewayUrl}/api/sessions/cancel-session/next`);
+  const upload = fetch(`${gatewayUrl}/api/recordings/${recording.recordingId}`, {
+    method: "POST",
+    headers: recorderHeaders("cancel-recorder", { "content-type": "audio/webm" }),
+    body: Buffer.from("audio"),
+  });
+  while (!resolveTranscription) await new Promise((resolve) => setTimeout(resolve, 1));
+
+  const cancelled = await fetch(`${gatewayUrl}/api/recordings/${recording.recordingId}`, {
+    method: "DELETE",
+    headers: recorderHeaders("cancel-recorder"),
+  });
+  assert.equal(cancelled.status, 200);
+  assert.equal(transcriptionSignal.aborted, true);
+  await readSseEventFromReader(eventReader, "recording-cancelled");
+
+  resolveTranscription(new Response(JSON.stringify({ text: "late transcript" }), {
+    headers: { "content-type": "application/json" },
+  }));
+  const uploadResult = await upload;
+  assert.equal(uploadResult.status, 409);
+  assert.deepEqual(await uploadResult.json(), { error: "Recording was cancelled" });
+  assert.equal((await delivery).status, 204);
+
+  const lateEvent = await Promise.race([
+    eventReader.read().then(() => "event"),
+    new Promise((resolve) => setTimeout(() => resolve("timeout"), 30)),
+  ]);
+  assert.equal(lateEvent, "timeout");
+  await eventReader.cancel();
+
+  const nextEvents = await connectRecorder(gatewayUrl, "cancel-recorder");
+  await acquireLease(gatewayUrl, "cancel-recorder");
+  const nextStart = await fetch(`${gatewayUrl}/api/sessions/cancel-session/toggle`, {
+    method: "POST",
+  });
+  assert.equal(nextStart.status, 200);
+  await readSseEvent(nextEvents, "recording-start");
+});
+
+test("aborted processing uploads cancel upstream work without late delivery", async (t) => {
+  let resolveTranscription;
+  let upstreamAbort;
+  const upstreamAborted = new Promise((resolve) => {
+    upstreamAbort = resolve;
+  });
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    pollTimeoutMs: 200,
+    fetchImpl: async (_url, options) => {
+      options.signal.addEventListener("abort", upstreamAbort, { once: true });
+      return new Promise((resolve) => {
+        resolveTranscription = resolve;
+      });
+    },
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "aborted-session");
+  const startEvents = await connectRecorder(gatewayUrl, "aborted-recorder");
+  await acquireLease(gatewayUrl, "aborted-recorder");
+  await fetch(`${gatewayUrl}/api/sessions/aborted-session/toggle`, { method: "POST" });
+  const recording = await readSseEvent(startEvents, "recording-start");
+
+  const events = await connectRecorder(gatewayUrl, "aborted-recorder");
+  const eventReader = events.body.getReader();
+  await fetch(`${gatewayUrl}/api/sessions/aborted-session/toggle`, { method: "POST" });
+  await readSseEventFromReader(eventReader, "recording-stop");
+
+  const delivery = fetch(`${gatewayUrl}/api/sessions/aborted-session/next`);
+  const abortController = new AbortController();
+  const upload = fetch(`${gatewayUrl}/api/recordings/${recording.recordingId}`, {
+    method: "POST",
+    headers: recorderHeaders("aborted-recorder", { "content-type": "audio/webm" }),
+    body: Buffer.from("audio"),
+    signal: abortController.signal,
+  });
+  while (!resolveTranscription) await new Promise((resolve) => setTimeout(resolve, 1));
+
+  abortController.abort();
+  await assert.rejects(upload);
+  await upstreamAborted;
+  await readSseEventFromReader(eventReader, "recording-cancelled");
+  resolveTranscription(new Response(JSON.stringify({ text: "late transcript" }), {
+    headers: { "content-type": "application/json" },
+  }));
+  assert.equal((await delivery).status, 204);
+
+  const lateEvent = await Promise.race([
+    eventReader.read().then(() => "event"),
+    new Promise((resolve) => setTimeout(() => resolve("timeout"), 30)),
+  ]);
+  assert.equal(lateEvent, "timeout");
+  await eventReader.cancel();
+
+  const nextEvents = await connectRecorder(gatewayUrl, "aborted-recorder");
+  await acquireLease(gatewayUrl, "aborted-recorder");
+  const nextStart = await fetch(`${gatewayUrl}/api/sessions/aborted-session/toggle`, {
+    method: "POST",
+  });
+  assert.equal(nextStart.status, 200);
+  await readSseEvent(nextEvents, "recording-start");
 });
 
 test("invalid session configuration and oversized audio fail before transcription", async (t) => {
@@ -403,12 +604,65 @@ test("browser mutations require same-origin CSRF credentials", async (t) => {
   const gatewayUrl = await listen(gateway);
   t.after(() => close(gateway));
 
+  const port = new URL(gatewayUrl).port;
+  for (const hostname of ["localhost", "127.0.0.1"]) {
+    const csrf = await fetch(`${gatewayUrl}/api/browser/csrf`);
+    const accepted = await fetch(`http://${hostname}:${port}/api/browser/lease`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: `http://${hostname}:${port}`,
+        "x-csrf-token": (await csrf.json()).token,
+      },
+      body: JSON.stringify({ id: "attacker" }),
+    });
+    assert.equal(accepted.status, 409);
+  }
+
+  const attackerCsrf = await fetch(`${gatewayUrl}/api/browser/csrf`);
+  const attackerHost = await requestStatus(gatewayUrl, "/api/browser/lease", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      host: `attacker.test:${port}`,
+      origin: `http://attacker.test:${port}`,
+      "x-csrf-token": (await attackerCsrf.json()).token,
+    },
+    body: JSON.stringify({ id: "attacker" }),
+  });
+  assert.equal(attackerHost, 403);
+
   const hostile = await fetch(`${gatewayUrl}/api/browser/lease`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: "https://evil.test" },
     body: JSON.stringify({ id: "attacker" }),
   });
   assert.equal(hostile.status, 403);
+
+  const malformedOriginCsrf = await fetch(`${gatewayUrl}/api/browser/csrf`);
+  const malformedOrigin = await fetch(`${gatewayUrl}/api/browser/lease`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      origin: "not-an-origin",
+      "x-csrf-token": (await malformedOriginCsrf.json()).token,
+    },
+    body: JSON.stringify({ id: "attacker" }),
+  });
+  assert.equal(malformedOrigin.status, 403);
+
+  const mismatchCsrf = await fetch(`${gatewayUrl}/api/browser/csrf`);
+  const mismatch = await requestStatus(gatewayUrl, "/api/browser/lease", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      host: `localhost:${port}`,
+      origin: gatewayUrl,
+      "x-csrf-token": (await mismatchCsrf.json()).token,
+    },
+    body: JSON.stringify({ id: "attacker" }),
+  });
+  assert.equal(mismatch, 403);
 
   const missingToken = await fetch(`${gatewayUrl}/api/browser/lease`, {
     method: "POST",

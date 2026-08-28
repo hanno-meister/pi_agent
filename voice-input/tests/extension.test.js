@@ -90,6 +90,59 @@ test("the extension pastes transcripts and never submits them", async () => {
   await pi.events.get("session_shutdown")({}, context);
 });
 
+test("session start returns while registration retries and recovers delivery", async () => {
+  let registrationAttempts = 0;
+  let delivered = false;
+  let gatewayAvailable = false;
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url).endsWith("/api/sessions") && options.method === "POST") {
+      registrationAttempts += 1;
+      return gatewayAvailable
+        ? response(201, { registered: true })
+        : response(503, { error: "gateway unavailable" });
+    }
+    if (String(url).endsWith("/next") && !delivered) {
+      delivered = true;
+      return response(200, { type: "transcript", text: "recovered prompt" });
+    }
+    if (String(url).endsWith("/next")) return response(204);
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  const pi = fakePi();
+  const pasted = [];
+  const context = {
+    cwd: "/workspace/project",
+    mode: "tui",
+    ui: {
+      notify() {},
+      pasteToEditor(text) {
+        pasted.push(text);
+      },
+      setStatus() {},
+    },
+  };
+  createVoiceExtension({
+    fetchImpl,
+    gatewayUrl: "http://gateway.test",
+    registrationRetryBaseMs: 10,
+    registrationRetryMaxMs: 10,
+  })(pi);
+
+  let sessionStartSettled = false;
+  const sessionStart = pi.events.get("session_start")({}, context);
+  sessionStart.then(() => {
+    sessionStartSettled = true;
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(sessionStartSettled, true);
+  assert.equal(registrationAttempts, 1);
+  gatewayAvailable = true;
+  await eventually(() => pasted.length === 1);
+  assert.equal(registrationAttempts, 2);
+  assert.deepEqual(pasted, ["recovered prompt"]);
+  await pi.events.get("session_shutdown")({}, context);
+});
+
 test("interactive extension instances register distinct identities and renew them", async () => {
   const registrations = [];
   const fetchImpl = async (url, options = {}) => {
@@ -181,6 +234,85 @@ test("voice setup selects a supported model for only the current session", async
 
   await first.events.get("session_shutdown")();
   await second.events.get("session_shutdown")();
+});
+
+test("voice setup wins over a delayed initial registration in either ordering", async () => {
+  const runRace = async (setupWhileInitialIsDelayed) => {
+    let initialStarted;
+    const initialStartedPromise = new Promise((resolve) => {
+      initialStarted = resolve;
+    });
+    let releaseInitial;
+    const initialRelease = new Promise((resolve) => {
+      releaseInitial = resolve;
+    });
+    let registrationCount = 0;
+    let activeRegistrations = 0;
+    let maxActiveRegistrations = 0;
+    const registrations = [];
+    let gatewayRegistration;
+    const fetchImpl = async (url, options = {}) => {
+      if (String(url).endsWith("/api/sessions") && options.method === "POST") {
+        registrationCount += 1;
+        activeRegistrations += 1;
+        maxActiveRegistrations = Math.max(maxActiveRegistrations, activeRegistrations);
+        try {
+          const registration = JSON.parse(options.body);
+          registrations.push(registration);
+          if (registrationCount === 1) {
+            initialStarted();
+            await initialRelease;
+          }
+          gatewayRegistration = registration;
+          return response(201, { registered: true });
+        } finally {
+          activeRegistrations -= 1;
+        }
+      }
+      if (String(url).endsWith("/next")) return response(204);
+      throw new Error(`Unexpected request: ${url}`);
+    };
+    const pi = fakePi();
+    const context = {
+      cwd: "/workspace/project",
+      mode: "tui",
+      ui: {
+        notify() {},
+        pasteToEditor() {},
+        select: async () => "whisper-1",
+        setStatus() {},
+      },
+    };
+    createVoiceExtension({
+      fetchImpl,
+      gatewayUrl: "http://gateway.test",
+      registrationIntervalMs: 100000,
+    })(pi);
+
+    await pi.events.get("session_start")({}, context);
+    await initialStartedPromise;
+    let setupPromise;
+    if (setupWhileInitialIsDelayed) {
+      setupPromise = pi.commands.get("voice-setup").handler("", context);
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(registrationCount, 1);
+    }
+    releaseInitial();
+    if (!setupPromise) {
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(registrationCount, 1);
+      setupPromise = pi.commands.get("voice-setup").handler("", context);
+    }
+    await setupPromise;
+    assert.equal(registrations[0].config.model, "gpt-4o-mini-transcribe");
+    assert.equal(registrations[1].config.model, "whisper-1");
+    assert.equal(gatewayRegistration.config.model, "whisper-1");
+    assert.equal(maxActiveRegistrations, 1);
+    await pi.events.get("session_shutdown")();
+  };
+
+  await runRace(true);
+  await runRace(false);
 });
 
 test("a failed voice setup does not change the session model", async () => {
