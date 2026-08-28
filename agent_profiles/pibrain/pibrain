@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Launch Pi with the shared second-brain profile.
+set -euo pipefail
+
+profile=/pi_agent/agent_profiles/pibrain
+
+exec pi \
+  --model openai-codex/gpt-5.6-sol \
+  --skill "$profile/skills/.agents/skills" \
+  "$@"

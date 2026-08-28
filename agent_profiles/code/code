@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+profile=/pi_agent/agent_profiles/code
+
+if [ ! -d "$profile/opencode" ]; then
+  printf 'code profile is unavailable: %s\n' "$profile" >&2
+  exit 1
+fi
+
+# Make this profile the scoped OpenCode global config. Project configuration is
+# still loaded later by OpenCode and can override these defaults.
+export XDG_CONFIG_HOME="$profile"
+unset OPENCODE_CONFIG OPENCODE_CONFIG_DIR OPENCODE_CONFIG_CONTENT
+unset OPENCODE_TUI_CONFIG OPENCODE_DISABLE_PROJECT_CONFIG
+
+# OMO Slim's background scheduler and web search are profile-only settings.
+export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
+export OPENCODE_ENABLE_EXA=1
+
+exec opencode "$@"

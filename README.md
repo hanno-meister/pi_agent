@@ -14,10 +14,11 @@ Good agentic work includes knowing when to build and when to adapt. This reposit
 | --- | --- | --- |
 | Docker environment and workspace hydration | Reproduce the workstation and safely hydrate private repositories | Designed and developed by me |
 | Neovim, tmux, and shell configuration | Provide my portable terminal development workflow | Configured and maintained by me, using third-party tools and plugins |
-| [`pibrain`](pi_agent_profiles/pibrain/) | Operate and learn from a private PARA second brain | Original second-brain workflows developed by me with agent assistance; selected utility skills retained from Matt Pocock with attribution |
-| [`pimatt`](pi_agent_profiles/pimatt/) | Provide general software-engineering workflows | Primarily curated from [Matt Pocock's skills](https://github.com/mattpocock/skills), with local integration and explicit attribution |
+| [`pibrain`](agent_profiles/pibrain/) | Operate and learn from a private PARA second brain | Original second-brain workflows developed by me with agent assistance; selected utility skills retained from Matt Pocock with attribution |
+| [`pimatt`](agent_profiles/pimatt/) | Provide general software-engineering workflows | Primarily curated from [Matt Pocock's skills](https://github.com/mattpocock/skills), with local integration and explicit attribution |
+| [`code`](agent_profiles/code/) | Run OpenCode with oh-my-opencode-slim orchestration | OpenCode and OMO Slim are installed packages; profile configuration is tracked locally and optional skills are installed manually |
 
-Copied skills retain their upstream license, source path, and content hash under the applicable [`pibrain`](pi_agent_profiles/pibrain/skills/) or [`pimatt`](pi_agent_profiles/pimatt/skills/) profile.
+Skills copied into `pibrain` and `pimatt` retain their upstream license, source path, and content hash under each profile's `skills/` directory. The `code` profile leaves optional third-party skill installation to the user.
 
 ## Original-work highlight: `pibrain`
 
@@ -34,7 +35,7 @@ Its skills cover:
 
 ### Adaptive learning workflow
 
-The [`second-brain-learn`](pi_agent_profiles/pibrain/skills/.agents/skills/second-brain-learn/SKILL.md) skill is based on two ideas:
+The [`second-brain-learn`](agent_profiles/pibrain/skills/.agents/skills/second-brain-learn/SKILL.md) skill is based on two ideas:
 
 - the PARA organization method from Tiago Forte's *[Building a Second Brain](https://www.buildingasecondbrain.com/book)*;
 - the learning process shown in Eero Alvar's *[How I Use AI to Learn Things](https://www.youtube.com/watch?v=kzcI5F4tGiU)*.
@@ -62,14 +63,15 @@ flowchart LR
 
     R["Public Git repository"] --> C
     R --> D["Authored dotfiles"]
-    R --> P["Tracked Pi profiles"]
+    R --> P["Tracked agent profiles"]
 
     D --> C
     P --> C
     P --> PB["pibrain: original second-brain workflows"]
-    P --> PM["pimatt: curated coding workflows"]
+    P --> PM["pimatt: curated Pi coding workflows"]
+    P --> PC["code: OpenCode + OMO Slim workflows"]
 
-    C --> V["Docker volumes: agent, editor, and tmux state"]
+    C --> V["Docker volumes: agent, editor, tmux, and OpenCode state"]
     C --> W["Ignored runtime workspaces"]
     W --> S["Private second brain"]
     W --> A["Private project repositories"]
@@ -107,9 +109,13 @@ docker compose exec pi bash
 The checkout is mounted at `/pi_agent`. Start the appropriate profile inside the container:
 
 ```sh
-# Coding session
+# Pi coding session
 cd /pi_agent/workspaces/projects/<repository>
 pimatt
+
+# OpenCode coding session
+cd /pi_agent/workspaces/projects/<repository>
+code
 
 # Second-brain session
 cd /pi_agent/workspaces/second_brain
@@ -147,10 +153,10 @@ The Docker image explicitly supports `amd64` and `arm64`. Automated end-to-end v
 tests/compose-smoke.sh
 ```
 
-The smoke test verifies startup without provider credentials, profile discovery, configuration symlinks, and Pi availability.
+The smoke test verifies startup without provider credentials, profile discovery, configuration symlinks, and Pi/OpenCode availability.
 
 ## License and attribution
 
 My original work in this repository is available under the [MIT License](LICENSE). Third-party tools, plugins, and bundled material remain subject to their own licenses.
 
-The skills copied from [`mattpocock/skills`](https://github.com/mattpocock/skills) retain their MIT license and provenance records under each profile's `skills/LICENSES/` and `skills/skills-lock.json` paths.
+The skills copied from [`mattpocock/skills`](https://github.com/mattpocock/skills) for `pibrain` and `pimatt` retain their MIT license and provenance records under those profiles' `skills/LICENSES/` and `skills/skills-lock.json` paths. `code` does not bundle them.
