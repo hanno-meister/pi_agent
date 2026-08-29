@@ -9,7 +9,9 @@ fi
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 tmp=$(mktemp -d)
 project="pi-agent-smoke-$RANDOM"
-compose=(docker compose --env-file /dev/null --project-directory "$tmp/checkout")
+# Port 0 asks Docker to allocate an ephemeral host port; the container still
+# listens on its configured port 4317.
+compose=(env VOICE_GATEWAY_PORT=0 docker compose --env-file /dev/null --project-directory "$tmp/checkout")
 cleanup() {
   "${compose[@]}" -p "$project" down --volumes --remove-orphans >/dev/null 2>&1 || true
   rm -rf "$tmp"
@@ -32,7 +34,7 @@ tar -C "$root" \
 env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
   "${compose[@]}" -p "$project" up --build --detach
 
-[ "$("${compose[@]}" -p "$project" ps --status running --services)" = "pi" ]
+[ "$("${compose[@]}" -p "$project" ps --status running --services | sort)" = "$(printf 'pi\nvoice-gateway')" ]
 "${compose[@]}" -p "$project" exec -T pi bash -lc 'test -n "$BASH_VERSION"'
 "${compose[@]}" -p "$project" exec -T pi test -L /root/.bashrc
 "${compose[@]}" -p "$project" exec -T pi test -L /root/.config/nvim
@@ -80,6 +82,36 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
 
 # Exercise two concurrent mini TUIs against shared, throwaway XDG roots.
 "${compose[@]}" -p "$project" exec -T pi bash /pi_agent/tests/code-mini-tmux-smoke.sh
+"${compose[@]}" -p "$project" exec -T pi test -L /root/.pi/agent/extensions/voice-input.js
+"${compose[@]}" -p "$project" exec -T pi sh -c 'test "$(readlink /root/.pi/agent/extensions/voice-input.js)" = /pi_agent/voice-input/extension-loader.js'
+"${compose[@]}" -p "$project" exec -T pi sh -c '\
+  set -e; \
+  node -e '"'"'
+    const { spawnSync } = require("node:child_process");
+    const result = spawnSync("pi", ["--mode", "rpc"], {
+      input: "{\"type\":\"get_commands\"}\n",
+      encoding: "utf8",
+    });
+    if (result.error) throw result.error;
+    if (result.status !== 0) process.exit(result.status || 1);
+    const messages = result.stdout.split(/\r?\n/).filter(Boolean).map(JSON.parse);
+    const response = messages.find((message) =>
+      message.type === "response" && message.command === "get_commands",
+    );
+    const commands = response?.data?.commands;
+    if (
+      !response?.success ||
+      !Array.isArray(commands) ||
+      !["voice", "voice-setup"].every((name) =>
+        commands.some((command) => command.name === name),
+      )
+    ) {
+      process.exit(1);
+    }
+  '"'"''
+"${compose[@]}" -p "$project" exec -T voice-gateway node -e \
+  "fetch('http://127.0.0.1:4317/health').then(async r => { const health = await r.json(); if (!r.ok || health.status !== 'unconfigured' || health.action !== 'Set OPENAI_API_KEY to enable transcription') process.exit(1) })"
+"${compose[@]}" -p "$project" port voice-gateway 4317 | grep -Ex '127\.0\.0\.1:[0-9]+'
 
 # pimatt explicitly adds its profile resources but leaves native skill discovery
 # enabled, allowing skills in the current project to compose with the profile.
