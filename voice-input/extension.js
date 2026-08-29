@@ -26,6 +26,7 @@ export function createVoiceExtension({
   registrationIntervalMs = 5000,
   registrationRetryBaseMs = 100,
   registrationRetryMaxMs = 2000,
+  cleanupTimeoutMs = 1000,
   ...configOverrides
 } = {}) {
   const defaultConfig = resolveVoiceConfig(configOverrides);
@@ -99,7 +100,10 @@ export function createVoiceExtension({
             session.registrationConfig,
             () => session.registrationOperation.active,
           );
-          if (registered) return true;
+          if (registered) {
+            session.registered = true;
+            return true;
+          }
           return false;
         } catch (error) {
           if (signal.aborted) return false;
@@ -217,6 +221,7 @@ export function createVoiceExtension({
               if (session && activeSession !== session) return;
               config = selectedConfig;
               if (session) {
+                session.registered = true;
                 session.registrationOperation.active = false;
                 startBackgroundWork(ctx, session);
               }
@@ -269,6 +274,7 @@ export function createVoiceExtension({
         controller: sessionController,
         registrationConfig: { ...config },
         registrationOperation: { active: true },
+        registered: false,
         backgroundStarted: false,
       };
       interactiveContext = ctx;
@@ -276,14 +282,27 @@ export function createVoiceExtension({
     });
 
     pi.on("session_shutdown", async () => {
+      const session = activeSession;
       controller?.abort();
-      if (activeSession) activeSession.registrationOperation.active = false;
-      try {
-        await request(`/api/sessions/${encodeURIComponent(sessionId)}`, {
-          method: "DELETE",
+      if (session) session.registrationOperation.active = false;
+      if (session?.registered) {
+        const cleanupController = new AbortController();
+        let cleanupTimer;
+        const cleanupTimeout = new Promise((resolve) => {
+          cleanupTimer = setTimeout(() => {
+            cleanupController.abort();
+            resolve();
+          }, cleanupTimeoutMs);
         });
-      } catch {
-        // Shutdown must still complete when the gateway is unavailable.
+        try {
+          const deletion = request(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+            method: "DELETE",
+            signal: cleanupController.signal,
+          }).catch(() => {});
+          await Promise.race([deletion, cleanupTimeout]);
+        } finally {
+          clearTimeout(cleanupTimer);
+        }
       }
       activeSession = undefined;
       interactiveContext?.ui.setStatus("voice-input", undefined);

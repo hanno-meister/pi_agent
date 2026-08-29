@@ -715,6 +715,48 @@ test("recording deadlines cancel unanswered recordings and are cleaned up", asyn
   await eventReader.cancel();
 });
 
+test("slow transcription may finish after the capture deadline", async (t) => {
+  let releaseTranscription;
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    fetchImpl: async () => new Promise((resolve) => {
+      releaseTranscription = resolve;
+    }),
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "slow-session", {
+    language: "en",
+    maxDurationSeconds: 1,
+    model: "whisper-1",
+  });
+  const events = await connectRecorder(gatewayUrl, "slow-recorder");
+  await acquireLease(gatewayUrl, "slow-recorder");
+  const eventReader = events.body.getReader();
+  await fetch(`${gatewayUrl}/api/sessions/slow-session/toggle`, { method: "POST" });
+  const recording = await readSseEventFromReader(eventReader, "recording-start");
+  await fetch(`${gatewayUrl}/api/sessions/slow-session/toggle`, { method: "POST" });
+  await readSseEventFromReader(eventReader, "recording-stop");
+  const delivery = fetch(`${gatewayUrl}/api/sessions/slow-session/next`);
+  const upload = fetch(`${gatewayUrl}/api/recordings/${recording.recordingId}`, {
+    method: "POST",
+    headers: recorderHeaders("slow-recorder", { "content-type": "audio/webm" }),
+    body: Buffer.from("audio"),
+  });
+  while (!releaseTranscription) await new Promise((resolve) => setTimeout(resolve, 1));
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  releaseTranscription(new Response(JSON.stringify({ text: "slow transcript" }), {
+    headers: { "content-type": "application/json" },
+  }));
+  assert.equal((await upload).status, 200);
+  assert.deepEqual(await (await delivery).json(), {
+    type: "transcript",
+    text: "slow transcript",
+  });
+  await eventReader.cancel();
+});
+
 test("CSRF issuance and validation prune expired tokens", async (t) => {
   let now = 0;
   const gateway = createVoiceGateway({ now: () => now, csrfTtlMs: 10 });

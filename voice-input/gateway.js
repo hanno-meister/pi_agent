@@ -10,6 +10,7 @@ const defaultTranscriptionUrl = "https://api.openai.com/v1/audio/transcriptions"
 // Chrome targets 128 kbit/s Opus; this allows equal space again for WebM overhead.
 const defaultUploadBytesPerSecond = 32_000;
 const defaultTranscriptionTimeoutMs = 60_000;
+const recordingCaptureStartGraceMs = 250;
 
 function json(response, status, value) {
   response.writeHead(status, { "content-type": "application/json" });
@@ -277,7 +278,7 @@ export function createVoiceGateway(overrides = {}) {
       const recording = activeRecording;
       recording.deadlineTimer = setTimeout(() => {
         if (activeRecording === recording) cancelRecording(recording);
-      }, recording.config.maxDurationSeconds * 1000);
+      }, recording.config.maxDurationSeconds * 1000 + recordingCaptureStartGraceMs);
       recording.deadlineTimer.unref?.();
       sendRecorderEvent(recording.recorderId, "recording-start", {
         maxDurationSeconds: recording.config.maxDurationSeconds,
@@ -521,6 +522,8 @@ export function createVoiceGateway(overrides = {}) {
           throw new RequestError(415, "Expected an audio upload");
         }
         recording.state = "processing";
+        clearTimeout(recording.deadlineTimer);
+        recording.deadlineTimer = undefined;
         const cancelOnClientDisconnect = () => {
           if (response.writableEnded) return;
           if (activeRecording === recording && recording.state === "processing") {
