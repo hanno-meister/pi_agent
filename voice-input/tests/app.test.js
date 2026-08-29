@@ -188,15 +188,21 @@ test("browser recording attempts cancel pending and failed starts without upload
 
     delayCaptureStart = true;
     const delayedAcknowledgementTrack = { stopped: 0, stop() { this.stopped++; } };
+    uploadPending = true;
     permissions.push(Promise.resolve({ getTracks: () => [delayedAcknowledgementTrack] }));
     await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "delayed-ack", maxDurationSeconds: 7 }) });
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(durationTimerDelay, 7000);
-    assert.equal(elements.get("status").textContent, "Ready — use Alt+R or /voice in Pi");
+    assert.equal(elements.get("status").textContent, "Recording…");
+    await listeners.get("recording-stop")({ data: JSON.stringify({ recordingId: "delayed-ack" }) });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(elements.get("status").textContent, "Transcribing…");
     resolveCaptureStart();
     delayCaptureStart = false;
     await new Promise((resolve) => setImmediate(resolve));
-    await listeners.get("recording-stop")({ data: JSON.stringify({ recordingId: "delayed-ack" }) });
+    assert.equal(elements.get("status").textContent, "Transcribing…");
+    resolveUpload(response(200, {}));
+    uploadPending = false;
     await new Promise((resolve) => setTimeout(resolve, 10));
     assert.equal(delayedAcknowledgementTrack.stopped, 1);
   } finally {

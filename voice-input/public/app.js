@@ -134,11 +134,14 @@ async function startRecording(targetRecordingId, maxDurationSeconds) {
       () => stopAtDurationLimit(() => stopRecording(attempt.recordingId)),
       maxDurationSeconds * 1000,
     );
+    show("Recording…", "recording");
     await acknowledgeCaptureStart(attempt.recordingId);
     if (attempt.cancelled) return;
-    show("Recording…", "recording");
   } catch (error) {
-    if (!attempt.cancelled) failAttempt(attempt, error);
+    if (!attempt.cancelled) {
+      if (attempt.recorder?.state === "recording") failAttempt(attempt, error);
+      else cancelAttempt(attempt, false);
+    }
   }
 }
 
@@ -195,7 +198,7 @@ function releaseAttemptTracks(attempt) {
   attempt.stream?.getTracks().forEach((track) => track.stop());
 }
 
-function cancelAttempt(attempt) {
+function cancelAttempt(attempt, showCancellation = true) {
   if (attempt.cancelled) return attempt.cancelRequest;
   attempt.cancelled = true;
   clearTimeout(attempt.timer);
@@ -207,7 +210,7 @@ function cancelAttempt(attempt) {
     { method: "DELETE", headers: { "x-recorder-id": recorderId } },
   ).catch(() => {});
   if (activeAttempt === attempt) activeAttempt = undefined;
-  show("Recording cancelled");
+  if (showCancellation) show("Recording cancelled");
   return attempt.cancelRequest;
 }
 

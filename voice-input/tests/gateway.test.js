@@ -956,6 +956,48 @@ test("quick-stop acknowledgement and upload remain accepted", async (t) => {
   await eventReader.cancel();
 });
 
+test("manual stop uses upload grace for an unuploaded long recording", async (t) => {
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    uploadArrivalGraceMs: 20,
+    captureStartTimeoutMs: 100,
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "manual-stop-session", {
+    language: "en",
+    maxDurationSeconds: 120,
+    model: "whisper-1",
+  });
+  const events = await connectRecorder(gatewayUrl, "manual-stop-recorder");
+  await acquireLease(gatewayUrl, "manual-stop-recorder");
+  const eventReader = events.body.getReader();
+  await fetch(`${gatewayUrl}/api/sessions/manual-stop-session/toggle`, { method: "POST" });
+  const recording = await readSseEventFromReader(eventReader, "recording-start");
+  assert.equal(
+    (await acknowledgeCaptureStart(
+      gatewayUrl,
+      "manual-stop-recorder",
+      recording.recordingId,
+    )).status,
+    200,
+  );
+  const stopped = await fetch(`${gatewayUrl}/api/sessions/manual-stop-session/toggle`, {
+    method: "POST",
+  });
+  assert.deepEqual(await stopped.json(), { state: "transcribing" });
+  await readSseEventFromReader(eventReader, "recording-stop");
+  await readSseEventFromReader(eventReader, "recording-cancelled");
+
+  const nextStart = await fetch(`${gatewayUrl}/api/sessions/manual-stop-session/toggle`, {
+    method: "POST",
+  });
+  assert.equal(nextStart.status, 200);
+  await readSseEventFromReader(eventReader, "recording-start");
+  await eventReader.cancel();
+});
+
 test("CSRF issuance and validation prune expired tokens", async (t) => {
   let now = 0;
   const gateway = createVoiceGateway({ now: () => now, csrfTtlMs: 10 });

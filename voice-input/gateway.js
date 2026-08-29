@@ -11,7 +11,7 @@ const defaultTranscriptionUrl = "https://api.openai.com/v1/audio/transcriptions"
 const defaultUploadBytesPerSecond = 32_000;
 const defaultTranscriptionTimeoutMs = 60_000;
 const defaultCaptureStartTimeoutMs = 10_000;
-const recordingUploadArrivalGraceMs = 5000;
+const defaultUploadArrivalGraceMs = 5000;
 
 function json(response, status, value) {
   response.writeHead(status, { "content-type": "application/json" });
@@ -121,6 +121,8 @@ export function createVoiceGateway(overrides = {}) {
       overrides.transcriptionTimeoutMs ?? defaultTranscriptionTimeoutMs,
     captureStartTimeoutMs:
       overrides.captureStartTimeoutMs ?? defaultCaptureStartTimeoutMs,
+    uploadArrivalGraceMs:
+      overrides.uploadArrivalGraceMs ?? defaultUploadArrivalGraceMs,
     uploadBytesPerSecond:
       overrides.uploadBytesPerSecond ?? defaultUploadBytesPerSecond,
   };
@@ -132,6 +134,9 @@ export function createVoiceGateway(overrides = {}) {
   }
   if (!Number.isFinite(options.captureStartTimeoutMs) || options.captureStartTimeoutMs <= 0) {
     throw new Error("Capture start timeout must be a positive finite number");
+  }
+  if (!Number.isFinite(options.uploadArrivalGraceMs) || options.uploadArrivalGraceMs <= 0) {
+    throw new Error("Upload arrival grace must be a positive finite number");
   }
   const defaultSessionConfig = {
     language: options.language,
@@ -219,10 +224,7 @@ export function createVoiceGateway(overrides = {}) {
 
   function cancelRecording(recording) {
     if (activeRecording !== recording) return false;
-    clearTimeout(recording.captureStartTimer);
-    recording.captureStartTimer = undefined;
-    clearTimeout(recording.deadlineTimer);
-    recording.deadlineTimer = undefined;
+    clearRecordingTimers(recording);
     recording.cancelled = true;
     recording.state = "cancelled";
     recording.cancellationController.abort();
@@ -231,6 +233,25 @@ export function createVoiceGateway(overrides = {}) {
       recordingId: recording.id,
     });
     return true;
+  }
+
+  function clearRecordingTimers(recording) {
+    clearTimeout(recording.captureStartTimer);
+    recording.captureStartTimer = undefined;
+    clearTimeout(recording.deadlineTimer);
+    recording.deadlineTimer = undefined;
+  }
+
+  function armRecordingDeadline(recording, durationMs) {
+    clearRecordingTimers(recording);
+    recording.deadlineTimer = setTimeout(() => {
+      if (activeRecording === recording) cancelRecording(recording);
+    }, durationMs);
+    recording.deadlineTimer.unref?.();
+  }
+
+  function armUploadArrivalDeadline(recording) {
+    armRecordingDeadline(recording, options.uploadArrivalGraceMs);
   }
 
   function sendRecorderEvent(recorderId, event, data) {
@@ -309,6 +330,7 @@ export function createVoiceGateway(overrides = {}) {
       return;
     }
     activeRecording.state = "transcribing";
+    armUploadArrivalDeadline(activeRecording);
     sendRecorderEvent(activeRecording.recorderId, "recording-stop", {
       recordingId: activeRecording.id,
       sessionId: activeRecording.ownerSessionId,
@@ -478,15 +500,10 @@ export function createVoiceGateway(overrides = {}) {
           json(response, 409, { error: "Recording is not awaiting capture start" });
           return;
         }
-        clearTimeout(recording.captureStartTimer);
-        recording.captureStartTimer = undefined;
         const deadlineMs = recording.state === "recording"
-          ? recording.config.maxDurationSeconds * 1000 + recordingUploadArrivalGraceMs
-          : recordingUploadArrivalGraceMs;
-        recording.deadlineTimer = setTimeout(() => {
-          if (activeRecording === recording) cancelRecording(recording);
-        }, deadlineMs);
-        recording.deadlineTimer.unref?.();
+          ? recording.config.maxDurationSeconds * 1000 + options.uploadArrivalGraceMs
+          : options.uploadArrivalGraceMs;
+        armRecordingDeadline(recording, deadlineMs);
         json(response, 200, { acknowledged: true });
         return;
       }
@@ -557,10 +574,7 @@ export function createVoiceGateway(overrides = {}) {
           throw new RequestError(415, "Expected an audio upload");
         }
         recording.state = "processing";
-        clearTimeout(recording.captureStartTimer);
-        recording.captureStartTimer = undefined;
-        clearTimeout(recording.deadlineTimer);
-        recording.deadlineTimer = undefined;
+        clearRecordingTimers(recording);
         const cancelOnClientDisconnect = () => {
           if (response.writableEnded) return;
           if (activeRecording === recording && recording.state === "processing") {
@@ -594,8 +608,7 @@ export function createVoiceGateway(overrides = {}) {
           }
           pruneSessions();
           const delivered = deliverToSession(recording.ownerSessionId, { type: "transcript", text });
-          clearTimeout(recording.deadlineTimer);
-          recording.deadlineTimer = undefined;
+          clearRecordingTimers(recording);
           if (activeRecording === recording) activeRecording = undefined;
           if (!delivered) {
             json(response, 200, { transcribed: true, discarded: true });
@@ -609,8 +622,7 @@ export function createVoiceGateway(overrides = {}) {
           }
           json(response, 200, { transcribed: true });
         } catch (error) {
-          clearTimeout(recording.deadlineTimer);
-          recording.deadlineTimer = undefined;
+          clearRecordingTimers(recording);
           if (activeRecording === recording) activeRecording = undefined;
           if (recording.cancelled) {
             if (!response.writableEnded && !response.destroyed) {
