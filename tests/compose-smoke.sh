@@ -9,7 +9,9 @@ fi
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 tmp=$(mktemp -d)
 project="pi-agent-smoke-$RANDOM"
-compose=(docker compose --env-file /dev/null --project-directory "$tmp/checkout")
+# Port 0 asks Docker to allocate an ephemeral host port; the container still
+# listens on its configured port 4317.
+compose=(env VOICE_GATEWAY_PORT=0 docker compose --env-file /dev/null --project-directory "$tmp/checkout")
 cleanup() {
   "${compose[@]}" -p "$project" down --volumes --remove-orphans >/dev/null 2>&1 || true
   rm -rf "$tmp"
