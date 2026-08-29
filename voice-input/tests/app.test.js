@@ -24,6 +24,7 @@ test("browser recording attempts cancel pending and failed starts without upload
   let expireNextMutation = true;
   let uploadPending = false;
   let resolveUpload;
+  let leaseRenewal;
   let Recorder = class { static isTypeSupported() { return true; } };
   const old = {
     document: globalThis.document, window: globalThis.window, navigator: globalThis.navigator,
@@ -38,7 +39,7 @@ test("browser recording attempts cancel pending and failed starts without upload
   } });
   globalThis.EventSource = function () { return eventSource; };
   globalThis.MediaRecorder = Recorder;
-  globalThis.setInterval = () => 1;
+  globalThis.setInterval = (callback) => { leaseRenewal = callback; return 1; };
   globalThis.clearInterval = () => {};
   globalThis.fetch = async (url, options = {}) => {
     requests.push({ url: String(url), method: options.method ?? "GET", headers: options.headers, signal: options.signal });
@@ -57,6 +58,10 @@ test("browser recording attempts cancel pending and failed starts without upload
   };
   try {
     await import(`../public/app.js?test=${Date.now()}`);
+    expireNextMutation = false;
+    await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "unarmed", maxDurationSeconds: 10 }) });
+    assert.equal(requests.filter((request) => request.method === "DELETE").length, 1);
+    expireNextMutation = true;
     await listeners.get("open")();
     permissions.push(Promise.resolve({ getTracks: () => [] }));
     await elements.get("enable").onclick();
@@ -66,15 +71,16 @@ test("browser recording attempts cancel pending and failed starts without upload
     globalThis.MediaRecorder = class { static isTypeSupported() { return false; } };
     await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "codec", maxDurationSeconds: 10 }) });
     await new Promise((resolve) => setTimeout(resolve, 10));
-    assert.equal(requests.filter((request) => request.method === "DELETE").length, 1);
+    assert.equal(requests.filter((request) => request.method === "DELETE").length, 2);
     globalThis.MediaRecorder = Recorder;
     let release;
     const pending = new Promise((resolve) => { release = resolve; });
     permissions.push(pending);
     await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "pending", maxDurationSeconds: 10 }) });
+    await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "arrived-while-active", maxDurationSeconds: 10 }) });
     globalThis.window.onkeydown({ key: "Escape" });
     await Promise.resolve();
-    assert.equal(requests.filter((request) => request.method === "DELETE").length, 2);
+    assert.equal(requests.filter((request) => request.method === "DELETE").length, 4);
     Recorder = class {
       static isTypeSupported() { return true; }
       constructor() { throw new Error("constructor failed"); }
@@ -91,7 +97,7 @@ test("browser recording attempts cancel pending and failed starts without upload
     await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "constructor", maxDurationSeconds: 10 }) });
     await new Promise((resolve) => setTimeout(resolve, 10));
     assert.equal(failedTrack.stopped, 1);
-    assert.equal(requests.filter((request) => request.method === "DELETE").length, 3);
+    assert.equal(requests.filter((request) => request.method === "DELETE").length, 5);
 
     class StartFailureRecorder {
       static isTypeSupported() { return true; }
@@ -105,7 +111,7 @@ test("browser recording attempts cancel pending and failed starts without upload
     await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "start", maxDurationSeconds: 10 }) });
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(startTrack.stopped, 1);
-    assert.equal(requests.filter((request) => request.method === "DELETE").length, 4);
+    assert.equal(requests.filter((request) => request.method === "DELETE").length, 6);
 
     let successfulRecorder;
     class SuccessfulRecorder {
@@ -130,7 +136,7 @@ test("browser recording attempts cancel pending and failed starts without upload
     assert.equal(uploadRequest.signal.aborted, false);
     globalThis.window.onkeydown({ key: "Escape" });
     assert.equal(uploadRequest.signal.aborted, true);
-    assert.equal(requests.filter((request) => request.method === "DELETE").length, 5);
+    assert.equal(requests.filter((request) => request.method === "DELETE").length, 7);
     resolveUpload(response(200, {}));
     uploadPending = false;
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -141,10 +147,15 @@ test("browser recording attempts cancel pending and failed starts without upload
     await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "success", maxDurationSeconds: 10 }) });
     await new Promise((resolve) => setTimeout(resolve, 10));
     assert.equal(successfulRecorder.state, "recording");
+    await listeners.get("open")();
+    assert.equal(elements.get("status").textContent, "Recording…");
     await listeners.get("recording-stop")({ data: JSON.stringify({ recordingId: "success" }) });
     await new Promise((resolve) => setTimeout(resolve, 10));
     assert.equal(successfulTrack.stopped, 1);
     assert.equal(requests.filter((request) => request.method === "POST" && request.url.includes("/recordings/")).length, 2);
+    listeners.get("error")();
+    await leaseRenewal();
+    assert.equal(elements.get("status").textContent, "Ready — use Alt+R or /voice in Pi");
   } finally {
     globalThis.document = old.document;
     globalThis.window = old.window;

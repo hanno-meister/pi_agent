@@ -158,16 +158,26 @@ export function createVoiceGateway(overrides = {}) {
   }
 
   function issueCsrfToken() {
+    pruneCsrfTokens();
     const token = randomUUID();
     csrfTokens.set(token, options.now() + options.csrfTtlMs);
     return token;
   }
 
+  function pruneCsrfTokens() {
+    const now = options.now();
+    for (const [token, expiresAt] of csrfTokens) {
+      if (expiresAt <= now) csrfTokens.delete(token);
+    }
+  }
+
   function requireBrowserRequest(request) {
+    pruneCsrfTokens();
     const origin = request.headers.origin;
     const host = request.headers.host;
     const token = request.headers["x-csrf-token"];
     const expiresAt = csrfTokens.get(token);
+    const now = options.now();
     let originUrl;
     let hostUrl;
     try {
@@ -192,7 +202,7 @@ export function createVoiceGateway(overrides = {}) {
       !loopbackHostnames.has(hostUrl.hostname) ||
       originUrl.host !== hostUrl.host ||
       !expiresAt ||
-      expiresAt <= options.now()
+      expiresAt <= now
     ) {
       throw new RequestError(403, "Browser request was rejected");
     }
@@ -202,6 +212,8 @@ export function createVoiceGateway(overrides = {}) {
 
   function cancelRecording(recording) {
     if (activeRecording !== recording) return false;
+    clearTimeout(recording.deadlineTimer);
+    recording.deadlineTimer = undefined;
     recording.cancelled = true;
     recording.state = "cancelled";
     recording.cancellationController.abort();
@@ -262,10 +274,15 @@ export function createVoiceGateway(overrides = {}) {
         recorderId: lease.recorderId,
         state: "recording",
       };
-      sendRecorderEvent(activeRecording.recorderId, "recording-start", {
-        maxDurationSeconds: activeRecording.config.maxDurationSeconds,
-        recordingId: activeRecording.id,
-        sessionId: activeRecording.ownerSessionId,
+      const recording = activeRecording;
+      recording.deadlineTimer = setTimeout(() => {
+        if (activeRecording === recording) cancelRecording(recording);
+      }, recording.config.maxDurationSeconds * 1000);
+      recording.deadlineTimer.unref?.();
+      sendRecorderEvent(recording.recorderId, "recording-start", {
+        maxDurationSeconds: recording.config.maxDurationSeconds,
+        recordingId: recording.id,
+        sessionId: recording.ownerSessionId,
       });
       json(response, 200, { state: "recording" });
       return;
@@ -325,6 +342,10 @@ export function createVoiceGateway(overrides = {}) {
       }
       if (request.method === "POST" && url.pathname === "/api/sessions") {
         const input = await readJson(request);
+        if (!input || typeof input !== "object" || Array.isArray(input)) {
+          json(response, 400, { error: "Expected a JSON object" });
+          return;
+        }
         if (typeof input.id !== "string" || input.id.length === 0) {
           json(response, 400, { error: "Session id is required" });
           return;
@@ -353,6 +374,22 @@ export function createVoiceGateway(overrides = {}) {
           waiter: current?.waiter,
         });
         json(response, 201, { registered: true });
+        return;
+      }
+      const sessionMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)$/);
+      if (request.method === "DELETE" && sessionMatch) {
+        const sessionId = decodeURIComponent(sessionMatch[1]);
+        const session = sessions.get(sessionId);
+        if (!session) {
+          json(response, 404, { error: "Pi session is unavailable" });
+          return;
+        }
+        sessions.delete(sessionId);
+        if (activeRecording?.ownerSessionId === sessionId) {
+          cancelRecording(activeRecording);
+        }
+        session.waiter?.();
+        json(response, 200, { deleted: true });
         return;
       }
       if (request.method === "GET" && url.pathname === "/api/browser/csrf") {
@@ -384,6 +421,10 @@ export function createVoiceGateway(overrides = {}) {
       }
       if (request.method === "POST" && url.pathname === "/api/browser/lease") {
         const input = await readJson(request);
+        if (!input || typeof input !== "object" || Array.isArray(input)) {
+          json(response, 400, { error: "Expected a JSON object" });
+          return;
+        }
         requireBrowserRequest(request);
         if (typeof input.id !== "string" || input.id.length === 0) {
           json(response, 400, { error: "Recorder id is required" });
@@ -513,6 +554,8 @@ export function createVoiceGateway(overrides = {}) {
           }
           pruneSessions();
           const delivered = deliverToSession(recording.ownerSessionId, { type: "transcript", text });
+          clearTimeout(recording.deadlineTimer);
+          recording.deadlineTimer = undefined;
           if (activeRecording === recording) activeRecording = undefined;
           if (!delivered) {
             json(response, 200, { transcribed: true, discarded: true });
@@ -526,6 +569,8 @@ export function createVoiceGateway(overrides = {}) {
           }
           json(response, 200, { transcribed: true });
         } catch (error) {
+          clearTimeout(recording.deadlineTimer);
+          recording.deadlineTimer = undefined;
           if (activeRecording === recording) activeRecording = undefined;
           if (recording.cancelled) {
             if (!response.writableEnded && !response.destroyed) {

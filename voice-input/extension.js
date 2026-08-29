@@ -278,6 +278,13 @@ export function createVoiceExtension({
     pi.on("session_shutdown", async () => {
       controller?.abort();
       if (activeSession) activeSession.registrationOperation.active = false;
+      try {
+        await request(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+          method: "DELETE",
+        });
+      } catch {
+        // Shutdown must still complete when the gateway is unavailable.
+      }
       activeSession = undefined;
       interactiveContext?.ui.setStatus("voice-input", undefined);
       interactiveContext = undefined;

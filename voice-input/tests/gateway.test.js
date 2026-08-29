@@ -656,3 +656,124 @@ test("browser mutations require same-origin CSRF credentials", async (t) => {
   });
   assert.equal(unsupportedContent.status, 415);
 });
+
+test("deleting an agent session wakes polling and cancels its recording", async (t) => {
+  const gateway = createVoiceGateway({ apiKey: "test-key", pollTimeoutMs: 1000 });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "deleted-session");
+  const events = await connectRecorder(gatewayUrl, "deleted-recorder");
+  await acquireLease(gatewayUrl, "deleted-recorder");
+  const eventReader = events.body.getReader();
+  const started = await fetch(`${gatewayUrl}/api/sessions/deleted-session/toggle`, {
+    method: "POST",
+  });
+  assert.deepEqual(await started.json(), { state: "recording" });
+  const recording = await readSseEventFromReader(eventReader, "recording-start");
+
+  const delivery = fetch(`${gatewayUrl}/api/sessions/deleted-session/next`);
+  const deleted = await fetch(`${gatewayUrl}/api/sessions/deleted-session`, {
+    method: "DELETE",
+  });
+  assert.equal(deleted.status, 200);
+  assert.deepEqual(await deleted.json(), { deleted: true });
+  assert.equal((await delivery).status, 204);
+  assert.deepEqual(
+    await readSseEventFromReader(eventReader, "recording-cancelled"),
+    { recordingId: recording.recordingId },
+  );
+  assert.equal(
+    (await fetch(`${gatewayUrl}/api/sessions/deleted-session/toggle`, { method: "POST" })).status,
+    404,
+  );
+  await eventReader.cancel();
+});
+
+test("recording deadlines cancel unanswered recordings and are cleaned up", async (t) => {
+  const gateway = createVoiceGateway({ apiKey: "test-key" });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "deadline-session", {
+    language: "en",
+    maxDurationSeconds: 1,
+    model: "whisper-1",
+  });
+  const events = await connectRecorder(gatewayUrl, "deadline-recorder");
+  await acquireLease(gatewayUrl, "deadline-recorder");
+  const eventReader = events.body.getReader();
+  await fetch(`${gatewayUrl}/api/sessions/deadline-session/toggle`, { method: "POST" });
+  await readSseEventFromReader(eventReader, "recording-start");
+  await readSseEventFromReader(eventReader, "recording-cancelled");
+
+  const nextStart = await fetch(`${gatewayUrl}/api/sessions/deadline-session/toggle`, {
+    method: "POST",
+  });
+  assert.equal(nextStart.status, 200);
+  await readSseEventFromReader(eventReader, "recording-start");
+  await eventReader.cancel();
+});
+
+test("CSRF issuance and validation prune expired tokens", async (t) => {
+  let now = 0;
+  const gateway = createVoiceGateway({ now: () => now, csrfTtlMs: 10 });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  const first = await fetch(`${gatewayUrl}/api/browser/csrf`);
+  const firstToken = (await first.json()).token;
+  now = 11;
+  const second = await fetch(`${gatewayUrl}/api/browser/csrf`);
+  const secondToken = (await second.json()).token;
+  const stale = await fetch(`${gatewayUrl}/api/browser/lease`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      origin: gatewayUrl,
+      "x-csrf-token": firstToken,
+    },
+    body: JSON.stringify({ id: "stale-recorder" }),
+  });
+  assert.equal(stale.status, 403);
+  const current = await fetch(`${gatewayUrl}/api/browser/lease`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      origin: gatewayUrl,
+      "x-csrf-token": secondToken,
+    },
+    body: JSON.stringify({ id: "stale-recorder" }),
+  });
+  assert.equal(current.status, 409);
+});
+
+test("agent-session and browser-lease JSON bodies must be objects", async (t) => {
+  const gateway = createVoiceGateway();
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  for (const body of ["null", "[]", "1", JSON.stringify("session")]) {
+    const result = await fetch(`${gatewayUrl}/api/sessions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+    assert.equal(result.status, 400);
+  }
+
+  const csrf = await fetch(`${gatewayUrl}/api/browser/csrf`);
+  const token = (await csrf.json()).token;
+  for (const body of ["null", "[]"]) {
+    const result = await fetch(`${gatewayUrl}/api/browser/lease`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: gatewayUrl,
+        "x-csrf-token": token,
+      },
+      body,
+    });
+    assert.equal(result.status, 400);
+  }
+});

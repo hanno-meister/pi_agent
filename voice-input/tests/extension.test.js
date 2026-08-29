@@ -90,6 +90,47 @@ test("the extension pastes transcripts and never submits them", async () => {
   await pi.events.get("session_shutdown")({}, context);
 });
 
+test("session shutdown waits for gateway session deletion", async () => {
+  const requests = [];
+  let releaseDelete;
+  const deletePending = new Promise((resolve) => {
+    releaseDelete = resolve;
+  });
+  const fetchImpl = async (url, options = {}) => {
+    requests.push({ url: String(url), method: options.method ?? "GET" });
+    if (String(url).endsWith("/api/sessions") && options.method === "POST") {
+      return response(201, { registered: true });
+    }
+    if (options.method === "DELETE") {
+      await deletePending;
+      return response(200, { deleted: true });
+    }
+    if (String(url).endsWith("/next")) return response(204);
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  const pi = fakePi();
+  const context = {
+    cwd: "/workspace/project",
+    mode: "tui",
+    ui: { notify() {}, pasteToEditor() {}, setStatus() {} },
+  };
+  createVoiceExtension({ fetchImpl, gatewayUrl: "http://gateway.test" })(pi);
+
+  await pi.events.get("session_start")({}, context);
+  const shutdown = pi.events.get("session_shutdown")({}, context);
+  await eventually(() => requests.some(({ method }) => method === "DELETE"));
+  let settled = false;
+  shutdown.then(() => { settled = true; });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(settled, false);
+  releaseDelete();
+  await shutdown;
+  assert.equal(
+    requests.filter(({ method }) => method === "DELETE").length,
+    1,
+  );
+});
+
 test("session start returns while registration retries and recovers delivery", async () => {
   let registrationAttempts = 0;
   let delivered = false;

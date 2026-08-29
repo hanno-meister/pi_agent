@@ -9,6 +9,7 @@ let csrfToken;
 let armed = false;
 let activeAttempt;
 let leaseTimer;
+let gatewayConnectionLost = false;
 
 function show(message, state = "") {
   status.textContent = message;
@@ -41,11 +42,27 @@ async function claimLease(takeoverLease = false) {
   if (!response.ok) throw new Error((await response.json()).error);
 }
 
+async function cancelGatewayRecording(recordingId) {
+  const response = await browserFetch(
+    `/api/recordings/${encodeURIComponent(recordingId)}`,
+    { method: "DELETE", headers: { "x-recorder-id": recorderId } },
+  );
+  if (!response.ok) throw new Error((await response.json()).error);
+}
+
+function showReadyStatus() {
+  if (!activeAttempt) show("Ready — use Alt+R or /voice in Pi");
+}
+
 function beginLeaseRenewal() {
   clearInterval(leaseTimer);
   leaseTimer = setInterval(async () => {
     try {
       await claimLease();
+      if (gatewayConnectionLost) {
+        gatewayConnectionLost = false;
+        showReadyStatus();
+      }
     } catch (error) {
       armed = false;
       clearInterval(leaseTimer);
@@ -193,6 +210,13 @@ function discardActiveRecording() {
   if (activeAttempt) cancelAttempt(activeAttempt);
 }
 
+function handleRecordingStart(data) {
+  if (!armed || activeAttempt) {
+    return cancelGatewayRecording(data.recordingId).catch((error) => show(error.message));
+  }
+  startRecording(data.recordingId, data.maxDurationSeconds).catch((error) => show(error.message));
+}
+
 enable.addEventListener("click", () => enableMicrophone());
 takeover.addEventListener("click", () => enableMicrophone(true));
 
@@ -205,6 +229,8 @@ events.addEventListener("open", async () => {
   if (armed) {
     try {
       await claimLease();
+      gatewayConnectionLost = false;
+      showReadyStatus();
     } catch (error) {
       show(error.message);
     }
@@ -214,9 +240,7 @@ events.addEventListener("open", async () => {
 });
 events.addEventListener("recording-start", (event) => {
   const data = JSON.parse(event.data);
-  startRecording(data.recordingId, data.maxDurationSeconds).catch((error) =>
-    show(error.message),
-  );
+  return handleRecordingStart(data);
 });
 events.addEventListener("recording-stop", (event) => {
   stopRecording(JSON.parse(event.data).recordingId);
@@ -228,6 +252,7 @@ events.addEventListener("recording-complete", (event) => {
 events.addEventListener("recording-cancelled", () => discardActiveRecording());
 events.addEventListener("recording-error", (event) => show(JSON.parse(event.data).message));
 events.addEventListener("error", () => {
+  gatewayConnectionLost = true;
   discardActiveRecording();
   show("Gateway connection lost");
 });
