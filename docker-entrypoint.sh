@@ -22,7 +22,8 @@ fi
 
 mkdir -p /root/.config /root/.ssh /root/.pi/agent/extensions
 chmod 700 /root/.ssh
-ln -sfn /pi_agent/voice-input/extension.js /root/.pi/agent/extensions/voice-input.js
+rm -f /root/.pi/agent/extensions/voice-input.js
+ln -s /pi_agent/voice-input/extension-loader.js /root/.pi/agent/extensions/voice-input.js
 rm -f /root/.bashrc
 rm -rf /root/.config/nvim /root/.config/tmux
 ln -s /pi_agent/dotfiles/bash/bashrc /root/.bashrc
