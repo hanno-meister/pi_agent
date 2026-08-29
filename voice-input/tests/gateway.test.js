@@ -912,6 +912,50 @@ test("capture-start acknowledgements require the active recording's recorder", a
   await eventReader.cancel();
 });
 
+test("quick-stop acknowledgement and upload remain accepted", async (t) => {
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    fetchImpl: async () => new Response(JSON.stringify({ text: "quick transcript" }), {
+      headers: { "content-type": "application/json" },
+    }),
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "quick-stop-session");
+  const events = await connectRecorder(gatewayUrl, "quick-stop-recorder");
+  await acquireLease(gatewayUrl, "quick-stop-recorder");
+  const eventReader = events.body.getReader();
+  await fetch(`${gatewayUrl}/api/sessions/quick-stop-session/toggle`, { method: "POST" });
+  const recording = await readSseEventFromReader(eventReader, "recording-start");
+  const stopped = await fetch(`${gatewayUrl}/api/sessions/quick-stop-session/toggle`, {
+    method: "POST",
+  });
+  assert.deepEqual(await stopped.json(), { state: "transcribing" });
+  await readSseEventFromReader(eventReader, "recording-stop");
+
+  assert.deepEqual(
+    await (await acknowledgeCaptureStart(
+      gatewayUrl,
+      "quick-stop-recorder",
+      recording.recordingId,
+    )).json(),
+    { acknowledged: true },
+  );
+  const delivery = fetch(`${gatewayUrl}/api/sessions/quick-stop-session/next`);
+  const upload = await fetch(`${gatewayUrl}/api/recordings/${recording.recordingId}`, {
+    method: "POST",
+    headers: recorderHeaders("quick-stop-recorder", { "content-type": "audio/webm" }),
+    body: Buffer.from("audio"),
+  });
+  assert.equal(upload.status, 200);
+  assert.deepEqual(await delivery.then((response) => response.json()), {
+    type: "transcript",
+    text: "quick transcript",
+  });
+  await eventReader.cancel();
+});
+
 test("CSRF issuance and validation prune expired tokens", async (t) => {
   let now = 0;
   const gateway = createVoiceGateway({ now: () => now, csrfTtlMs: 10 });

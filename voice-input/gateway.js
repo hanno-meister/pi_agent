@@ -473,16 +473,19 @@ export function createVoiceGateway(overrides = {}) {
           !recording ||
           recording.id !== decodeURIComponent(captureStartMatch[1]) ||
           recording.recorderId !== request.headers["x-recorder-id"] ||
-          recording.state !== "recording"
+          !["recording", "transcribing"].includes(recording.state)
         ) {
           json(response, 409, { error: "Recording is not awaiting capture start" });
           return;
         }
         clearTimeout(recording.captureStartTimer);
         recording.captureStartTimer = undefined;
+        const deadlineMs = recording.state === "recording"
+          ? recording.config.maxDurationSeconds * 1000 + recordingUploadArrivalGraceMs
+          : recordingUploadArrivalGraceMs;
         recording.deadlineTimer = setTimeout(() => {
           if (activeRecording === recording) cancelRecording(recording);
-        }, recording.config.maxDurationSeconds * 1000 + recordingUploadArrivalGraceMs);
+        }, deadlineMs);
         recording.deadlineTimer.unref?.();
         json(response, 200, { acknowledged: true });
         return;

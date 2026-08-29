@@ -130,12 +130,12 @@ async function startRecording(targetRecordingId, maxDurationSeconds) {
     });
     attempt.recorder.addEventListener("stop", () => uploadRecording(attempt), { once: true });
     attempt.recorder.start();
-    await acknowledgeCaptureStart(attempt.recordingId);
-    if (attempt.cancelled) return;
     attempt.timer = setTimeout(
       () => stopAtDurationLimit(() => stopRecording(attempt.recordingId)),
       maxDurationSeconds * 1000,
     );
+    await acknowledgeCaptureStart(attempt.recordingId);
+    if (attempt.cancelled) return;
     show("Recording…", "recording");
   } catch (error) {
     if (!attempt.cancelled) failAttempt(attempt, error);

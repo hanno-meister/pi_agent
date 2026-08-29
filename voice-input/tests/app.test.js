@@ -26,12 +26,16 @@ test("browser recording attempts cancel pending and failed starts without upload
   let resolveUpload;
   let leaseRenewal;
   let failCaptureStart = false;
+  let delayCaptureStart = false;
+  let resolveCaptureStart;
+  let durationTimerDelay;
   let Recorder = class { static isTypeSupported() { return true; } };
   const old = {
     document: globalThis.document, window: globalThis.window, navigator: globalThis.navigator,
     MediaRecorder: globalThis.MediaRecorder, EventSource: globalThis.EventSource,
     fetch: globalThis.fetch,
     setInterval: globalThis.setInterval, clearInterval: globalThis.clearInterval,
+    setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout,
   };
   globalThis.document = { querySelector(selector) { return elements.get(selector.slice(1)); } };
   globalThis.window = { addEventListener(name, handler) { this[`on${name}`] = handler; } };
@@ -42,6 +46,10 @@ test("browser recording attempts cancel pending and failed starts without upload
   globalThis.MediaRecorder = Recorder;
   globalThis.setInterval = (callback) => { leaseRenewal = callback; return 1; };
   globalThis.clearInterval = () => {};
+  globalThis.setTimeout = (callback, delay, ...args) => {
+    if (delay === 7000) durationTimerDelay = delay;
+    return old.setTimeout(callback, delay, ...args);
+  };
   globalThis.fetch = async (url, options = {}) => {
     requests.push({ url: String(url), method: options.method ?? "GET", headers: options.headers, signal: options.signal });
     if (String(url).endsWith("/csrf")) {
@@ -53,6 +61,11 @@ test("browser recording attempts cancel pending and failed starts without upload
       return response(403, { error: "expired token" });
     }
     if (options.method === "POST" && String(url).endsWith("/capture-start")) {
+      if (delayCaptureStart) {
+        return new Promise((resolve) => {
+          resolveCaptureStart = () => resolve(response(200, {}));
+        });
+      }
       return failCaptureStart
         ? response(500, { error: "capture acknowledgement failed" })
         : response(200, {});
@@ -172,6 +185,20 @@ test("browser recording attempts cancel pending and failed starts without upload
     listeners.get("error")();
     await leaseRenewal();
     assert.equal(elements.get("status").textContent, "Ready — use Alt+R or /voice in Pi");
+
+    delayCaptureStart = true;
+    const delayedAcknowledgementTrack = { stopped: 0, stop() { this.stopped++; } };
+    permissions.push(Promise.resolve({ getTracks: () => [delayedAcknowledgementTrack] }));
+    await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "delayed-ack", maxDurationSeconds: 7 }) });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(durationTimerDelay, 7000);
+    assert.equal(elements.get("status").textContent, "Ready — use Alt+R or /voice in Pi");
+    resolveCaptureStart();
+    delayCaptureStart = false;
+    await new Promise((resolve) => setImmediate(resolve));
+    await listeners.get("recording-stop")({ data: JSON.stringify({ recordingId: "delayed-ack" }) });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(delayedAcknowledgementTrack.stopped, 1);
   } finally {
     globalThis.document = old.document;
     globalThis.window = old.window;
@@ -181,5 +208,7 @@ test("browser recording attempts cancel pending and failed starts without upload
     globalThis.fetch = old.fetch;
     globalThis.setInterval = old.setInterval;
     globalThis.clearInterval = old.clearInterval;
+    globalThis.setTimeout = old.setTimeout;
+    globalThis.clearTimeout = old.clearTimeout;
   }
 });
