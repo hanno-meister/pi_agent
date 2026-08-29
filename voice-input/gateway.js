@@ -413,24 +413,6 @@ export function createVoiceGateway(overrides = {}) {
         json(response, 200, { leased: true });
         return;
       }
-      if (request.method === "POST" && url.pathname === "/api/browser/toggle") {
-        requireBrowserRequest(request);
-        const lease = currentRecorderLease();
-        if (!lease || request.headers["x-recorder-id"] !== lease.recorderId) {
-          json(response, 409, { error: "Browser does not hold the recorder lease" });
-          return;
-        }
-        if (activeRecording) {
-          await toggle(activeRecording.ownerSessionId, response);
-          return;
-        }
-        if (sessions.size !== 1) {
-          json(response, 409, { error: "Exactly one Pi session must be available" });
-          return;
-        }
-        await toggle(sessions.keys().next().value, response);
-        return;
-      }
       const toggleMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/toggle$/);
       if (request.method === "POST" && toggleMatch) {
         await toggle(decodeURIComponent(toggleMatch[1]), response);
@@ -532,13 +514,15 @@ export function createVoiceGateway(overrides = {}) {
           pruneSessions();
           const delivered = deliverToSession(recording.ownerSessionId, { type: "transcript", text });
           if (activeRecording === recording) activeRecording = undefined;
+          if (!delivered) {
+            json(response, 200, { transcribed: true, discarded: true });
+            return;
+          }
           if (delivered) {
             sendRecorderEvent(recording.recorderId, "recording-complete", {
               recordingId: recording.id,
               sessionId: recording.ownerSessionId,
             });
-          } else {
-            sendRecorderEvent(recording.recorderId, "recording-recovery", { text });
           }
           json(response, 200, { transcribed: true });
         } catch (error) {

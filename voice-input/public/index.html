@@ -11,9 +11,8 @@
     h1 { font-size: 1.4rem; font-weight: 600; }
     button { border: 0; border-radius: 999px; padding: 1rem 1.4rem; background: #70d6a5; color: #092117; cursor: pointer; font: inherit; font-weight: 700; }
     button:disabled { cursor: not-allowed; opacity: .45; }
-    #toggle, #takeover { display: none; margin-left: .5rem; }
+    #takeover { display: none; margin-left: .5rem; }
     #status { min-height: 1.5rem; color: #aeb8c2; }
-    #recovery { display: block; width: 100%; min-height: 4rem; margin-top: 1rem; }
     .recording { color: #ff8b8b !important; }
   </style>
 </head>
@@ -23,8 +22,6 @@
     <p id="status">Connecting…</p>
     <button id="enable" disabled>Enable microphone</button>
     <button id="takeover" disabled>Take over recorder</button>
-    <button id="toggle">Start recording</button>
-    <textarea id="recovery" readonly aria-label="Recovered transcript"></textarea>
   </main>
   <script type="module" src="/app.js"></script>
 </body>

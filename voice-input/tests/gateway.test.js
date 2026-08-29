@@ -513,30 +513,6 @@ test("one recorder lease requires explicit idle takeover and cannot be stolen wh
   assert.equal(staleRecorderUpload.status, 409);
 });
 
-test("stale session registrations expire while renewed sessions remain live", async (t) => {
-  const gateway = createVoiceGateway({
-    apiKey: "test-key",
-    sessionTtlMs: 30,
-  });
-  const gatewayUrl = await listen(gateway);
-  t.after(() => close(gateway));
-
-  await register(gatewayUrl, "stale-session");
-  await register(gatewayUrl, "live-session");
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  await register(gatewayUrl, "live-session");
-  await new Promise((resolve) => setTimeout(resolve, 20));
-
-  const events = await connectRecorder(gatewayUrl, "recorder-a");
-  await acquireLease(gatewayUrl, "recorder-a");
-  const fallback = await fetch(`${gatewayUrl}/api/browser/toggle`, {
-    method: "POST",
-    headers: recorderHeaders("recorder-a"),
-  });
-  assert.deepEqual(await fallback.json(), { state: "recording" });
-  assert.equal((await readSseEvent(events, "recording-start")).sessionId, "live-session");
-});
-
 test("recorder disconnect cancels an active recording", async (t) => {
   const gateway = createVoiceGateway({ apiKey: "test-key" });
   const gatewayUrl = await listen(gateway);
@@ -558,7 +534,7 @@ test("recorder disconnect cancels an active recording", async (t) => {
   })).json(), { state: "recording" });
 });
 
-test("a stale target is never rerouted and recovers only in the recorder", async (t) => {
+test("a stale target discards its transcript without recorder recovery", async (t) => {
   let now = 0;
   const gateway = createVoiceGateway({
     apiKey: "test-key",
@@ -572,8 +548,8 @@ test("a stale target is never rerouted and recovers only in the recorder", async
   t.after(() => close(gateway));
 
   await register(gatewayUrl, "vanishing-session");
-  const events = await connectRecorder(gatewayUrl, "recovery-recorder");
-  await acquireLease(gatewayUrl, "recovery-recorder");
+  const events = await connectRecorder(gatewayUrl, "stale-recorder");
+  await acquireLease(gatewayUrl, "stale-recorder");
   await fetch(`${gatewayUrl}/api/sessions/vanishing-session/toggle`, { method: "POST" });
   now = 11;
 
@@ -585,17 +561,19 @@ test("a stale target is never rerouted and recovers only in the recorder", async
     body += decoder.decode(value, { stream: true });
   }
   const recordingId = JSON.parse(body.match(/event: recording-start\ndata: (.+)/)?.[1] ?? "null").recordingId;
-  const recoveryUpload = await fetch(`${gatewayUrl}/api/recordings/${recordingId}`, {
+  const staleUpload = await fetch(`${gatewayUrl}/api/recordings/${recordingId}`, {
     method: "POST",
-    headers: recorderHeaders("recovery-recorder", { "content-type": "audio/webm" }),
+    headers: recorderHeaders("stale-recorder", { "content-type": "audio/webm" }),
     body: Buffer.from("audio"),
   });
-  assert.equal(recoveryUpload.status, 200);
-  while (!body.includes("event: recording-recovery")) {
-    const { value } = await reader.read();
-    body += decoder.decode(value, { stream: true });
-  }
-  assert.match(body, /event: recording-recovery\ndata: {"text":"copy this"}/);
+  assert.equal(staleUpload.status, 200);
+  assert.deepEqual(await staleUpload.json(), { transcribed: true, discarded: true });
+  const lateEvent = await Promise.race([
+    reader.read().then(() => "event"),
+    new Promise((resolve) => setTimeout(() => resolve("timeout"), 30)),
+  ]);
+  assert.equal(lateEvent, "timeout");
+  await reader.cancel();
   assert.equal((await fetch(`${gatewayUrl}/api/sessions/vanishing-session/next`)).status, 404);
 });
 

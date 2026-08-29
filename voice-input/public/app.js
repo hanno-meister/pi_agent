@@ -3,8 +3,6 @@ import { audioBitsPerSecond, stopAtDurationLimit } from "./recording-policy.js";
 const status = document.querySelector("#status");
 const enable = document.querySelector("#enable");
 const takeover = document.querySelector("#takeover");
-const toggle = document.querySelector("#toggle");
-const recovery = document.querySelector("#recovery");
 
 const recorderId = crypto.randomUUID();
 let csrfToken;
@@ -51,7 +49,6 @@ function beginLeaseRenewal() {
     } catch (error) {
       armed = false;
       clearInterval(leaseTimer);
-      toggle.style.display = "none";
       enable.style.display = "inline-block";
       show(error.message);
     }
@@ -67,7 +64,6 @@ async function enableMicrophone(takeoverLease = false) {
     beginLeaseRenewal();
     enable.style.display = "none";
     takeover.style.display = "none";
-    toggle.style.display = "inline-block";
     show("Ready — use Alt+R or /voice in Pi");
   } catch (error) {
     takeover.style.display = error.message.includes("another browser")
@@ -91,7 +87,6 @@ async function startRecording(targetRecordingId, maxDurationSeconds) {
     abortController: new AbortController(),
   };
   activeAttempt = attempt;
-  recovery.value = "";
   try {
     if (!MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
       throw new Error("Chrome WebM/Opus recording is unavailable");
@@ -114,7 +109,6 @@ async function startRecording(targetRecordingId, maxDurationSeconds) {
       () => stopAtDurationLimit(() => stopRecording(attempt.recordingId)),
       maxDurationSeconds * 1000,
     );
-    toggle.textContent = "Stop recording";
     show("Recording…", "recording");
   } catch (error) {
     if (!attempt.cancelled) failAttempt(attempt, error);
@@ -131,7 +125,6 @@ function stopRecording(eventRecordingId) {
   clearTimeout(attempt.timer);
   attempt.recorder.stop();
   releaseAttemptTracks(attempt);
-  toggle.textContent = "Start recording";
   show("Transcribing…");
 }
 
@@ -156,7 +149,10 @@ async function uploadRecording(attempt) {
       },
     );
     if (!response.ok) throw new Error((await response.json()).error);
-    if (!attempt.cancelled) show("Inserted into Pi draft");
+    const outcome = await response.json();
+    if (!attempt.cancelled) {
+      show(outcome.discarded ? "Pi session ended; transcript discarded" : "Inserted into Pi draft");
+    }
   } catch (error) {
     if (!attempt.cancelled) show(error.message);
   } finally {
@@ -184,7 +180,6 @@ function cancelAttempt(attempt) {
     { method: "DELETE", headers: { "x-recorder-id": recorderId } },
   ).catch(() => {});
   if (activeAttempt === attempt) activeAttempt = undefined;
-  toggle.textContent = "Start recording";
   show("Recording cancelled");
   return attempt.cancelRequest;
 }
@@ -198,17 +193,8 @@ function discardActiveRecording() {
   if (activeAttempt) cancelAttempt(activeAttempt);
 }
 
-async function browserToggle() {
-  const response = await browserFetch("/api/browser/toggle", {
-    method: "POST",
-    headers: { "x-recorder-id": recorderId },
-  });
-  if (!response.ok) show((await response.json()).error);
-}
-
 enable.addEventListener("click", () => enableMicrophone());
 takeover.addEventListener("click", () => enableMicrophone(true));
-toggle.addEventListener("click", browserToggle);
 
 const events = new EventSource(
   `/api/browser/events?id=${encodeURIComponent(recorderId)}`,
@@ -235,12 +221,11 @@ events.addEventListener("recording-start", (event) => {
 events.addEventListener("recording-stop", (event) => {
   stopRecording(JSON.parse(event.data).recordingId);
 });
-events.addEventListener("recording-complete", () => show("Inserted into Pi draft"));
-events.addEventListener("recording-cancelled", () => discardActiveRecording());
-events.addEventListener("recording-recovery", (event) => {
-  recovery.value = JSON.parse(event.data).text;
-  show("Pi session ended — copy the recovered transcript");
+events.addEventListener("recording-complete", (event) => {
+  const data = event.data ? JSON.parse(event.data) : {};
+  show(data.discarded ? "Pi session ended; transcript discarded" : "Inserted into Pi draft");
 });
+events.addEventListener("recording-cancelled", () => discardActiveRecording());
 events.addEventListener("recording-error", (event) => show(JSON.parse(event.data).message));
 events.addEventListener("error", () => {
   discardActiveRecording();

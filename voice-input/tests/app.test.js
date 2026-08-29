@@ -10,7 +10,7 @@ function response(status, value) {
 
 test("browser recording attempts cancel pending and failed starts without uploading", async () => {
   const elements = new Map();
-  for (const id of ["status", "enable", "takeover", "toggle", "recovery"]) {
+  for (const id of ["status", "enable", "takeover"]) {
     elements.set(id, {
       style: {}, value: "", textContent: "", disabled: false,
       addEventListener(name, handler) { this[`on${name}`] = handler; },
@@ -62,6 +62,7 @@ test("browser recording attempts cancel pending and failed starts without upload
     await elements.get("enable").onclick();
     assert.equal(requests.filter((request) => request.url.endsWith("/lease")).length, 2);
     assert.equal(csrfRequests, 2);
+    assert.equal(requests.some((request) => request.url.endsWith("/toggle")), false);
     globalThis.MediaRecorder = class { static isTypeSupported() { return false; } };
     await listeners.get("recording-start")({ data: JSON.stringify({ recordingId: "codec", maxDurationSeconds: 10 }) });
     await new Promise((resolve) => setTimeout(resolve, 10));
