@@ -50,6 +50,14 @@ async function cancelGatewayRecording(recordingId) {
   if (!response.ok) throw new Error((await response.json()).error);
 }
 
+async function acknowledgeCaptureStart(recordingId) {
+  const response = await browserFetch(
+    `/api/recordings/${encodeURIComponent(recordingId)}/capture-start`,
+    { method: "POST", headers: { "x-recorder-id": recorderId } },
+  );
+  if (!response.ok) throw new Error((await response.json()).error);
+}
+
 function showReadyStatus() {
   if (!activeAttempt) show("Ready — use Alt+R or /voice in Pi");
 }
@@ -122,6 +130,8 @@ async function startRecording(targetRecordingId, maxDurationSeconds) {
     });
     attempt.recorder.addEventListener("stop", () => uploadRecording(attempt), { once: true });
     attempt.recorder.start();
+    await acknowledgeCaptureStart(attempt.recordingId);
+    if (attempt.cancelled) return;
     attempt.timer = setTimeout(
       () => stopAtDurationLimit(() => stopRecording(attempt.recordingId)),
       maxDurationSeconds * 1000,

@@ -72,6 +72,13 @@ async function acquireLease(gatewayUrl, recorderId, takeover = false) {
   });
 }
 
+async function acknowledgeCaptureStart(gatewayUrl, recorderId, recordingId) {
+  return fetch(`${gatewayUrl}/api/recordings/${encodeURIComponent(recordingId)}/capture-start`, {
+    method: "POST",
+    headers: recorderHeaders(recorderId),
+  });
+}
+
 async function readSseEvent(response, expectedEvent) {
   const reader = response.body.getReader();
   return readSseEventFromReader(reader, expectedEvent);
@@ -673,6 +680,7 @@ test("deleting an agent session wakes polling and cancels its recording", async 
   const recording = await readSseEventFromReader(eventReader, "recording-start");
 
   const delivery = fetch(`${gatewayUrl}/api/sessions/deleted-session/next`);
+  await new Promise((resolve) => setImmediate(resolve));
   const deleted = await fetch(`${gatewayUrl}/api/sessions/deleted-session`, {
     method: "DELETE",
   });
@@ -691,7 +699,10 @@ test("deleting an agent session wakes polling and cancels its recording", async 
 });
 
 test("recording deadlines cancel unanswered recordings and are cleaned up", async (t) => {
-  const gateway = createVoiceGateway({ apiKey: "test-key" });
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    captureStartTimeoutMs: 20,
+  });
   const gatewayUrl = await listen(gateway);
   t.after(() => close(gateway));
 
@@ -712,6 +723,98 @@ test("recording deadlines cancel unanswered recordings and are cleaned up", asyn
   });
   assert.equal(nextStart.status, 200);
   await readSseEventFromReader(eventReader, "recording-start");
+  await eventReader.cancel();
+});
+
+test("a delayed capture acknowledgement starts the capture deadline", async (t) => {
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    captureStartTimeoutMs: 700,
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "delayed-start-session", {
+    language: "en",
+    maxDurationSeconds: 1,
+    model: "whisper-1",
+  });
+  const events = await connectRecorder(gatewayUrl, "delayed-start-recorder");
+  await acquireLease(gatewayUrl, "delayed-start-recorder");
+  const eventReader = events.body.getReader();
+  await fetch(`${gatewayUrl}/api/sessions/delayed-start-session/toggle`, { method: "POST" });
+  const recording = await readSseEventFromReader(eventReader, "recording-start");
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  assert.equal(
+    (await acknowledgeCaptureStart(
+      gatewayUrl,
+      "delayed-start-recorder",
+      recording.recordingId,
+    )).status,
+    200,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 900));
+
+  const stopped = await fetch(
+    `${gatewayUrl}/api/sessions/delayed-start-session/toggle`,
+    { method: "POST" },
+  );
+  assert.deepEqual(await stopped.json(), { state: "transcribing" });
+  await readSseEventFromReader(eventReader, "recording-stop");
+  const cancelled = await fetch(`${gatewayUrl}/api/recordings/${recording.recordingId}`, {
+    method: "DELETE",
+    headers: recorderHeaders("delayed-start-recorder"),
+  });
+  assert.equal(cancelled.status, 200);
+  await readSseEventFromReader(eventReader, "recording-cancelled");
+  await eventReader.cancel();
+});
+
+test("capture deadline allows upload arrival grace after configured duration", async (t) => {
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    fetchImpl: async () => new Response(JSON.stringify({ text: "grace transcript" }), {
+      headers: { "content-type": "application/json" },
+    }),
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "grace-session", {
+    language: "en",
+    maxDurationSeconds: 1,
+    model: "whisper-1",
+  });
+  const events = await connectRecorder(gatewayUrl, "grace-recorder");
+  await acquireLease(gatewayUrl, "grace-recorder");
+  const eventReader = events.body.getReader();
+  await fetch(`${gatewayUrl}/api/sessions/grace-session/toggle`, { method: "POST" });
+  const recording = await readSseEventFromReader(eventReader, "recording-start");
+  assert.equal(
+    (await acknowledgeCaptureStart(
+      gatewayUrl,
+      "grace-recorder",
+      recording.recordingId,
+    )).status,
+    200,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  const stopped = await fetch(`${gatewayUrl}/api/sessions/grace-session/toggle`, {
+    method: "POST",
+  });
+  assert.deepEqual(await stopped.json(), { state: "transcribing" });
+  await readSseEventFromReader(eventReader, "recording-stop");
+  const delivery = fetch(`${gatewayUrl}/api/sessions/grace-session/next`);
+  const upload = await fetch(`${gatewayUrl}/api/recordings/${recording.recordingId}`, {
+    method: "POST",
+    headers: recorderHeaders("grace-recorder", { "content-type": "audio/webm" }),
+    body: Buffer.from("audio"),
+  });
+  assert.equal(upload.status, 200);
+  assert.deepEqual(await delivery.then((response) => response.json()), {
+    type: "transcript",
+    text: "grace transcript",
+  });
   await eventReader.cancel();
 });
 
@@ -736,6 +839,10 @@ test("slow transcription may finish after the capture deadline", async (t) => {
   const eventReader = events.body.getReader();
   await fetch(`${gatewayUrl}/api/sessions/slow-session/toggle`, { method: "POST" });
   const recording = await readSseEventFromReader(eventReader, "recording-start");
+  assert.deepEqual(
+    await (await acknowledgeCaptureStart(gatewayUrl, "slow-recorder", recording.recordingId)).json(),
+    { acknowledged: true },
+  );
   await fetch(`${gatewayUrl}/api/sessions/slow-session/toggle`, { method: "POST" });
   await readSseEventFromReader(eventReader, "recording-stop");
   const delivery = fetch(`${gatewayUrl}/api/sessions/slow-session/next`);
@@ -754,6 +861,54 @@ test("slow transcription may finish after the capture deadline", async (t) => {
     type: "transcript",
     text: "slow transcript",
   });
+  await eventReader.cancel();
+});
+
+test("capture-start acknowledgements require the active recording's recorder", async (t) => {
+  const gateway = createVoiceGateway({ apiKey: "test-key" });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "ack-session");
+  const events = await connectRecorder(gatewayUrl, "ack-recorder");
+  await acquireLease(gatewayUrl, "ack-recorder");
+  const eventReader = events.body.getReader();
+  await fetch(`${gatewayUrl}/api/sessions/ack-session/toggle`, { method: "POST" });
+  const recording = await readSseEventFromReader(eventReader, "recording-start");
+
+  const unauthorized = await fetch(
+    `${gatewayUrl}/api/recordings/${recording.recordingId}/capture-start`,
+    { method: "POST" },
+  );
+  assert.equal(unauthorized.status, 403);
+  const wrongRecording = await acknowledgeCaptureStart(
+    gatewayUrl,
+    "ack-recorder",
+    "not-the-active-recording",
+  );
+  assert.equal(wrongRecording.status, 409);
+  const wrongRecorder = await fetch(
+    `${gatewayUrl}/api/recordings/${recording.recordingId}/capture-start`,
+    {
+      method: "POST",
+      headers: recorderHeaders("ack-recorder", { "x-recorder-id": "other-recorder" }),
+    },
+  );
+  assert.equal(wrongRecorder.status, 409);
+  assert.deepEqual(
+    await (await acknowledgeCaptureStart(
+      gatewayUrl,
+      "ack-recorder",
+      recording.recordingId,
+    )).json(),
+    { acknowledged: true },
+  );
+  const cancelled = await fetch(`${gatewayUrl}/api/recordings/${recording.recordingId}`, {
+    method: "DELETE",
+    headers: recorderHeaders("ack-recorder"),
+  });
+  assert.equal(cancelled.status, 200);
+  await readSseEventFromReader(eventReader, "recording-cancelled");
   await eventReader.cancel();
 });
 

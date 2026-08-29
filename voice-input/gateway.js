@@ -10,7 +10,8 @@ const defaultTranscriptionUrl = "https://api.openai.com/v1/audio/transcriptions"
 // Chrome targets 128 kbit/s Opus; this allows equal space again for WebM overhead.
 const defaultUploadBytesPerSecond = 32_000;
 const defaultTranscriptionTimeoutMs = 60_000;
-const recordingCaptureStartGraceMs = 250;
+const defaultCaptureStartTimeoutMs = 10_000;
+const recordingUploadArrivalGraceMs = 5000;
 
 function json(response, status, value) {
   response.writeHead(status, { "content-type": "application/json" });
@@ -118,6 +119,8 @@ export function createVoiceGateway(overrides = {}) {
     transcriptionUrl: overrides.transcriptionUrl ?? defaultTranscriptionUrl,
     transcriptionTimeoutMs:
       overrides.transcriptionTimeoutMs ?? defaultTranscriptionTimeoutMs,
+    captureStartTimeoutMs:
+      overrides.captureStartTimeoutMs ?? defaultCaptureStartTimeoutMs,
     uploadBytesPerSecond:
       overrides.uploadBytesPerSecond ?? defaultUploadBytesPerSecond,
   };
@@ -126,6 +129,9 @@ export function createVoiceGateway(overrides = {}) {
   }
   if (!Number.isInteger(options.uploadBytesPerSecond) || options.uploadBytesPerSecond < 1) {
     throw new Error("Upload bytes per second must be a positive integer");
+  }
+  if (!Number.isFinite(options.captureStartTimeoutMs) || options.captureStartTimeoutMs <= 0) {
+    throw new Error("Capture start timeout must be a positive finite number");
   }
   const defaultSessionConfig = {
     language: options.language,
@@ -213,6 +219,8 @@ export function createVoiceGateway(overrides = {}) {
 
   function cancelRecording(recording) {
     if (activeRecording !== recording) return false;
+    clearTimeout(recording.captureStartTimer);
+    recording.captureStartTimer = undefined;
     clearTimeout(recording.deadlineTimer);
     recording.deadlineTimer = undefined;
     recording.cancelled = true;
@@ -276,10 +284,10 @@ export function createVoiceGateway(overrides = {}) {
         state: "recording",
       };
       const recording = activeRecording;
-      recording.deadlineTimer = setTimeout(() => {
+      recording.captureStartTimer = setTimeout(() => {
         if (activeRecording === recording) cancelRecording(recording);
-      }, recording.config.maxDurationSeconds * 1000 + recordingCaptureStartGraceMs);
-      recording.deadlineTimer.unref?.();
+      }, options.captureStartTimeoutMs);
+      recording.captureStartTimer.unref?.();
       sendRecorderEvent(recording.recorderId, "recording-start", {
         maxDurationSeconds: recording.config.maxDurationSeconds,
         recordingId: recording.id,
@@ -455,6 +463,30 @@ export function createVoiceGateway(overrides = {}) {
         json(response, 200, { leased: true });
         return;
       }
+      const captureStartMatch = url.pathname.match(
+        /^\/api\/recordings\/([^/]+)\/capture-start$/,
+      );
+      if (request.method === "POST" && captureStartMatch) {
+        requireBrowserRequest(request);
+        const recording = activeRecording;
+        if (
+          !recording ||
+          recording.id !== decodeURIComponent(captureStartMatch[1]) ||
+          recording.recorderId !== request.headers["x-recorder-id"] ||
+          recording.state !== "recording"
+        ) {
+          json(response, 409, { error: "Recording is not awaiting capture start" });
+          return;
+        }
+        clearTimeout(recording.captureStartTimer);
+        recording.captureStartTimer = undefined;
+        recording.deadlineTimer = setTimeout(() => {
+          if (activeRecording === recording) cancelRecording(recording);
+        }, recording.config.maxDurationSeconds * 1000 + recordingUploadArrivalGraceMs);
+        recording.deadlineTimer.unref?.();
+        json(response, 200, { acknowledged: true });
+        return;
+      }
       const toggleMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/toggle$/);
       if (request.method === "POST" && toggleMatch) {
         await toggle(decodeURIComponent(toggleMatch[1]), response);
@@ -522,6 +554,8 @@ export function createVoiceGateway(overrides = {}) {
           throw new RequestError(415, "Expected an audio upload");
         }
         recording.state = "processing";
+        clearTimeout(recording.captureStartTimer);
+        recording.captureStartTimer = undefined;
         clearTimeout(recording.deadlineTimer);
         recording.deadlineTimer = undefined;
         const cancelOnClientDisconnect = () => {
