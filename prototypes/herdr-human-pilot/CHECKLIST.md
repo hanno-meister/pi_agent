@@ -20,11 +20,11 @@ On macOS, use Bash with curl and `shasum`; the harness falls back from unsupport
 
 Supported native Herdr assets: Linux `x86_64` / `aarch64`, and macOS `x86_64` / `arm64`. Unsupported `uname -s`/`uname -m` pairs fail before any download. If macOS reports Gatekeeper quarantine or developer verification, remediation is opt-in and limited to the downloaded binary's `com.apple.quarantine` attribute.
 
-Refresh these two files from the immutable prototype commit (replace `PINNED_COMMIT` with the commit hash supplied with this release):
+Refresh these two files from immutable commit `12b0ec0`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hanno-meister/pi_agent/PINNED_COMMIT/prototypes/herdr-human-pilot/pilot.sh -o pilot.sh
-curl -fsSL https://raw.githubusercontent.com/hanno-meister/pi_agent/PINNED_COMMIT/prototypes/herdr-human-pilot/CHECKLIST.md -o CHECKLIST.md
+curl -fsSL https://raw.githubusercontent.com/hanno-meister/pi_agent/12b0ec0/prototypes/herdr-human-pilot/pilot.sh -o pilot.sh
+curl -fsSL https://raw.githubusercontent.com/hanno-meister/pi_agent/12b0ec0/prototypes/herdr-human-pilot/CHECKLIST.md -o CHECKLIST.md
 ```
 
 ## Interactive observations
