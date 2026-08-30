@@ -14,6 +14,9 @@ The harness downloads Herdr v0.8.2 on first use and refuses any SHA-256 other th
 
 - [ ] Pane focus is direct **Alt-h/j/k/l**; assess focus predictability. Keep **Ctrl-a** for non-pane actions.
 - Ctrl-h/j/k/l collide with terminal Backspace/Enter/control input, so pane focus uses Alt-h/j/k/l.
+- [ ] **Alt-n** creates a workspace and **Alt-w** opens the workspace picker; assess both actions.
+- Alt shortcuts may be intercepted by the outer terminal or OS; record the observed behavior rather than claiming a Herdr failure.
+- Keybinding sweep: no duplicate configured chords; default bare h/j/k/l remain intentionally local to Navigate mode, while Ctrl-a remains the prefix for other native actions.
 - [ ] Mouse: assess selection/copy, pane resize, and scroll. Note whether mouse capture interferes with terminal selection.
 - [ ] Vi-like navigation: assess the direct Alt-h/j/k/l focus behavior; do not claim vi editor evidence.
 - [ ] Agent sidebar: observe named agents while working and idle; record any naturally occurring blocked/approval prompt only. Do not create unsafe approvals.

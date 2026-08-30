@@ -88,6 +88,8 @@ focus_pane_left = "alt+h"
 focus_pane_down = "alt+j"
 focus_pane_up = "alt+k"
 focus_pane_right = "alt+l"
+new_workspace = "alt+n"
+workspace_picker = "alt+w"
 
 [ui]
 mouse_capture = true
