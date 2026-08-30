@@ -84,14 +84,10 @@ ensure_dirs() {
 # Temporary human-pilot config; generated only inside this directory.
 [keys]
 prefix = "ctrl+a"
-focus_pane_left = "prefix+h"
-focus_pane_down = "prefix+j"
-focus_pane_up = "prefix+k"
-focus_pane_right = "prefix+l"
-navigate_pane_left = "h"
-navigate_pane_down = "j"
-navigate_pane_up = "k"
-navigate_pane_right = "l"
+focus_pane_left = "ctrl+h"
+focus_pane_down = "ctrl+j"
+focus_pane_up = "ctrl+k"
+focus_pane_right = "ctrl+l"
 
 [ui]
 mouse_capture = true

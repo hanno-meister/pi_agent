@@ -12,9 +12,9 @@ The harness downloads Herdr v0.8.2 on first use and refuses any SHA-256 other th
 
 ## Interactive observations
 
-- [ ] Prefix is **Ctrl-a**: try `Ctrl-a h/j/k/l` and direct h/j/k/l navigation; assess focus predictability.
+- [ ] Pane focus is direct **Ctrl-h/j/k/l**; assess focus predictability. Keep **Ctrl-a** for non-pane actions.
 - [ ] Mouse: assess selection/copy, pane resize, and scroll. Note whether mouse capture interferes with terminal selection.
-- [ ] Vi-like navigation: assess h/j/k/l movement in the Herdr UI; do not claim vi editor evidence.
+- [ ] Vi-like navigation: assess the direct Ctrl-h/j/k/l focus behavior; do not claim vi editor evidence.
 - [ ] Agent sidebar: observe named agents while working and idle; record any naturally occurring blocked/approval prompt only. Do not create unsafe approvals.
 - [ ] Inspect agent `list`, `get`, `explain`, and `read`; note working/idle/done/blocked behavior and whether attention is visible.
 - [ ] Detach/reattach: press **Ctrl-a q**, then from a second terminal run `./pilot.sh attach`.
