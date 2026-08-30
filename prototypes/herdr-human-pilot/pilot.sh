@@ -21,6 +21,18 @@ PI_AGENT_DIR=${PI_CODING_AGENT_DIR:-/root/.pi/agent}
 die() { printf 'pilot: %s\n' "$*" >&2; exit 1; }
 safe_id() { [[ ${1:-} =~ ^[a-z][a-z0-9:_-]{0,63}$ ]]; }
 
+now_ms() {
+  local raw seconds
+  raw=$(date +%s%3N 2>/dev/null || true)
+  if [[ "$raw" =~ ^[0-9]+$ ]]; then
+    printf '%s\n' "$raw"
+    return 0
+  fi
+  seconds=$(date +%s 2>/dev/null || true)
+  [[ "$seconds" =~ ^[0-9]+$ ]] || seconds=0
+  printf '%s000\n' "$seconds"
+}
+
 sha256() {
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$1" | cut -d' ' -f1
@@ -60,11 +72,11 @@ record() {
   local label=$1; shift
   local started ended rc output command
   command=$(quote_cmd "$@")
-  started=$(date +%s%3N)
+  started=$(now_ms)
   set +e
   output=$("$@" 2>&1)
   rc=$?
-  ended=$(date +%s%3N)
+  ended=$(now_ms)
   printf '\n### %s\n\n**Command:** `%s`\n**Duration:** %sms  **Exit:** %s\n\n```text\n%s\n```\n' \
     "$label" "$command" "$((ended-started))" "$rc" "$output" >> "$EVIDENCE"
   printf '%s\n' "$output"

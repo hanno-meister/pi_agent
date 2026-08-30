@@ -1,14 +1,22 @@
 # Human Herdr pilot checklist
 
-Run inside the target container from this directory. `setup --no-agents` creates only the disposable server/layout. Normal `setup` also starts named Pi/OpenCode agents; it sends no prompts.
+First create and enter the staging directory; the two prototype files must be placed there before setup downloads Herdr with curl:
 
 ```sh
+mkdir -p /tmp/herdr-human-pilot
+cd /tmp/herdr-human-pilot
+# Place pilot.sh and CHECKLIST.md here from the prototype tree.
+chmod +x ./pilot.sh
 ./pilot.sh setup
 ./pilot.sh status | tee -a evidence.md
 ./pilot.sh attach
 ```
 
+`setup --no-agents` creates only the disposable server/layout. Normal `setup` also starts named Pi/OpenCode agents; it sends no prompts.
+
 The harness downloads Herdr v0.8.2 on first use and refuses any SHA-256 other than the required digest. Runtime config, sockets, sessions, integrations, logs, and the downloaded binary stay below this prototype directory. Existing Pi credentials are referenced through `PI_CODING_AGENT_DIR` (default `/root/.pi/agent`); secrets are neither copied nor printed.
+
+On macOS, use Bash with curl and `shasum`; the harness falls back from unsupported fractional `date` output to whole-second milliseconds.
 
 ## Interactive observations
 
