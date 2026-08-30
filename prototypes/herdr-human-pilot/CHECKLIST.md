@@ -33,7 +33,7 @@ curl -fsSL https://raw.githubusercontent.com/hanno-meister/pi_agent/e445c99/prot
 
 - [ ] Pane focus is direct **Ctrl-h/j/k/l**; assess focus predictability. Keep **Ctrl-a** for non-pane actions.
 - Ctrl-h and Ctrl-j can be delivered as Backspace/Enter by terminals and might not work; these are user-selected bindings.
-- [ ] **Ctrl-n** creates a workspace and **Ctrl-w** opens the workspace picker; assess both actions.
+- [ ] Create a workspace with the exact sequence **Ctrl-a, then n** (`prefix+n`); **Ctrl-w** opens the workspace picker. Assess both actions.
 - Ctrl shortcuts may be intercepted by terminal line editing or the outer terminal/OS; record the observed behavior rather than claiming a Herdr failure.
 - Keybinding sweep: no duplicate configured chords; default bare h/j/k/l remain intentionally local to Navigate mode, while Ctrl-a remains the prefix for other native actions.
 - [ ] Mouse: assess selection/copy, pane resize, and scroll. Note whether mouse capture interferes with terminal selection.

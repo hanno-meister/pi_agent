@@ -193,7 +193,7 @@ focus_pane_left = "ctrl+h"
 focus_pane_down = "ctrl+j"
 focus_pane_up = "ctrl+k"
 focus_pane_right = "ctrl+l"
-new_workspace = "ctrl+n"
+new_workspace = "prefix+n"
 workspace_picker = "ctrl+w"
 
 [ui]
