@@ -18,6 +18,8 @@ The harness downloads Herdr v0.8.2 on first use and refuses any SHA-256 other th
 
 On macOS, use Bash with curl and `shasum`; the harness falls back from unsupported fractional `date` output to whole-second milliseconds.
 
+If macOS appears stuck after `pilot: starting isolated Herdr server (hp)`, readiness is bounded to 15 seconds. Ctrl-C is safe; run `./pilot.sh status`, then `./pilot.sh cleanup`, and inspect `.s/server.log` plus `.x/herdr/sessions/hp/herdr-server.log` if present.
+
 Supported native Herdr assets: Linux `x86_64` / `aarch64`, and macOS `x86_64` / `arm64`. Unsupported `uname -s`/`uname -m` pairs fail before any download. If macOS reports Gatekeeper quarantine or developer verification, remediation is opt-in and limited to the downloaded binary's `com.apple.quarantine` attribute.
 
 Refresh these two files from immutable commit `12b0ec0`:

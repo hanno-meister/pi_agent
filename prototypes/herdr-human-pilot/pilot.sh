@@ -63,6 +63,34 @@ now_ms() {
   printf '%s000\n' "$seconds"
 }
 
+utc_iso() {
+  date -u '+%Y-%m-%dT%H:%M:%SZ'
+}
+
+bounded_status() {
+  python3 - "$BIN" "$SESSION" "$HOME_DIR" "$XDG_DIR" "$CONFIG" <<'PY'
+import os
+import subprocess
+import sys
+
+binary, session, home, xdg, config = sys.argv[1:]
+env = os.environ.copy()
+env.update(HOME=home, XDG_CONFIG_HOME=xdg, HERDR_CONFIG_PATH=config)
+if env.get("HERDR_TEST_STATUS_MODE") == "hang":
+    command = [sys.executable, "-c", "import time; time.sleep(60)"]
+else:
+    command = [binary, "--session", session, "status", "server", "--json"]
+try:
+    result = subprocess.run(command, env=env, text=True, capture_output=True, timeout=2.0)
+except subprocess.TimeoutExpired:
+    print("pilot: Herdr status timed out after 2s", file=sys.stderr)
+    raise SystemExit(124)
+sys.stdout.write(result.stdout)
+sys.stderr.write(result.stderr)
+raise SystemExit(result.returncode)
+PY
+}
+
 sha256() {
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$1" | cut -d' ' -f1
@@ -140,6 +168,20 @@ record_herdr() {
     "$BIN" --session "$SESSION" "$@"
 }
 
+record_bounded_status() {
+  local label=$1
+  local started ended rc output
+  started=$(now_ms)
+  set +e
+  output=$(bounded_status 2>&1)
+  rc=$?
+  ended=$(now_ms)
+  printf '\n### %s\n\n**Command:** `bounded_status (Python subprocess timeout=2s)`\n**Duration:** %sms  **Exit:** %s\n\n```text\n%s\n```\n' \
+    "$label" "$((ended-started))" "$rc" "$output" >> "$EVIDENCE"
+  printf '%s\n' "$output"
+  return "$rc"
+}
+
 ensure_dirs() {
   mkdir -p "$HOME_DIR/.pi/agent/extensions" "$HOME_DIR/.config/opencode/plugins" "$XDG_DIR" "$STATE"
   if [[ ! -f "$CONFIG" ]]; then
@@ -166,7 +208,7 @@ EOF
 
 server_running() {
   local status
-  status=$(herdr status server --json 2>/dev/null) || return 1
+  status=$(bounded_status 2>/dev/null) || return 1
   printf '%s' "$status" | python3 -c \
     'import json,sys; raise SystemExit(0 if json.load(sys.stdin).get("running") is True else 1)' 2>/dev/null
 }
@@ -177,8 +219,16 @@ start_server() {
   nohup env HOME="$HOME_DIR" XDG_CONFIG_HOME="$XDG_DIR" HERDR_CONFIG_PATH="$CONFIG" \
     "$BIN" --session "$SESSION" server > "$STATE/server.log" 2>&1 &
   printf '%s\n' "$!" > "$STATE/server.pid"
-  sleep 1
-  server_running || die "Herdr server did not start; see $STATE/server.log"
+  local deadline current
+  deadline=$(( $(now_ms) + 15000 ))
+  while :; do
+    if server_running; then return 0; fi
+    current=$(now_ms)
+    if (( current >= deadline )); then
+      die "Herdr server readiness timed out after 15s; launch log: $STATE/server.log; Herdr log: $XDG_DIR/herdr/sessions/$SESSION/herdr-server.log"
+    fi
+    sleep 0.25
+  done
 }
 
 install_temp_integrations() {
@@ -275,9 +325,9 @@ status_cmd() {
   verify_binary
   ensure_dirs
   {
-    printf '# human Herdr pilot status (%s)\n' "$(date -Is)"
+    printf '# human Herdr pilot status (%s)\n' "$(utc_iso)"
     printf 'scope=%s session=%s binary_sha256=%s\n' "$ROOT" "$SESSION" "$(sha256 "$BIN")"
-    record_herdr 'status: server' status server --json || true
+    record_bounded_status 'status: server' || true
     record_herdr 'status: workspaces' workspace list || true
     if load_ids; then
       record_herdr 'status: tabs' tab list --workspace "$WORKSPACE_ID" || true
