@@ -4,9 +4,6 @@ umask 077
 
 # Disposable Herdr human pilot. Runtime files stay below this prototype directory.
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-BIN="$ROOT/herdr-linux-aarch64"
-URL=https://github.com/herdrdev/herdr/releases/download/v0.8.2/herdr-linux-aarch64
-EXPECTED_SHA=f55610658e1c2e0d2aaef730b4b2ab885f7f8ba00285ab372bfb14f2e3d5b40d
 SESSION=hp
 # Keep these names short: UNIX-domain socket paths have a small platform limit.
 HOME_DIR="$ROOT/.h"
@@ -20,6 +17,39 @@ PI_AGENT_DIR=${PI_CODING_AGENT_DIR:-/root/.pi/agent}
 
 die() { printf 'pilot: %s\n' "$*" >&2; exit 1; }
 safe_id() { [[ ${1:-} =~ ^[a-z][a-z0-9:_-]{0,63}$ ]]; }
+
+select_asset() {
+  # HERDR_TEST_UNAME_S/M are a non-invasive test seam; normal runs use uname.
+  local os=${HERDR_TEST_UNAME_S:-$(uname -s 2>/dev/null || true)}
+  local arch=${HERDR_TEST_UNAME_M:-$(uname -m 2>/dev/null || true)}
+  case "$os:$arch" in
+    Linux:x86_64)
+      ASSET=herdr-linux-x86_64
+      EXPECTED_SHA=976150a14d490c94b243ea2e1a7eb2dfb67f12e36b182db90936f6728e6aecf4
+      ;;
+    Linux:aarch64)
+      ASSET=herdr-linux-aarch64
+      EXPECTED_SHA=f55610658e1c2e0d2aaef730b4b2ab885f7f8ba00285ab372bfb14f2e3d5b40d
+      ;;
+    Darwin:arm64)
+      ASSET=herdr-macos-aarch64
+      EXPECTED_SHA=a5d4f4d504d8b309c91f811050559300faba31258425f53c50852fc96f6ae574
+      ;;
+    Darwin:x86_64)
+      ASSET=herdr-macos-x86_64
+      EXPECTED_SHA=ab50262c8190cd7aa9056d249d255c08c328c3e8716de9cfa29db4f131b8e2c1
+      ;;
+    *)
+      die "unsupported Herdr platform: uname -s=$os uname -m=$arch"
+      ;;
+  esac
+  PLATFORM_OS=$os
+  PLATFORM_ARCH=$arch
+  BIN="$ROOT/$ASSET"
+  URL="https://github.com/herdrdev/herdr/releases/download/v0.8.2/$ASSET"
+}
+
+select_asset
 
 now_ms() {
   local raw seconds
@@ -55,6 +85,27 @@ verify_binary() {
   actual=$(sha256 "$BIN")
   [[ "$actual" == "$EXPECTED_SHA" ]] || die "SHA-256 mismatch; expected $EXPECTED_SHA, got $actual"
   chmod 700 "$BIN"
+  if [[ "$PLATFORM_OS" == Darwin ]]; then
+    local version_output version_rc
+    set +e
+    version_output=$("$BIN" --version 2>&1)
+    version_rc=$?
+    set -u
+    if [[ "$version_rc" != 0 ]]; then
+      if [[ "$version_output" =~ [Qq]uarantine|[Dd]eveloper|[Vv]erif|cannot[[:space:]]be[[:space:]]opened ]]; then
+        printf 'pilot: macOS Gatekeeper blocked Herdr; quarantine remediation is opt-in\n' >&2
+        if [[ "${HERDR_MACOS_REMOVE_QUARANTINE:-0}" == 1 ]]; then
+          command -v xattr >/dev/null 2>&1 || die 'xattr is required for opt-in Gatekeeper remediation'
+          xattr -d com.apple.quarantine "$BIN" || die 'could not remove Herdr quarantine attribute'
+          "$BIN" --version >/dev/null 2>&1 || die 'Herdr still cannot execute after quarantine remediation'
+        else
+          die 'Herdr execution blocked by macOS Gatekeeper; set HERDR_MACOS_REMOVE_QUARANTINE=1 to remove only com.apple.quarantine'
+        fi
+      else
+        die "Herdr executable check failed: $version_output"
+      fi
+    fi
+  fi
 }
 
 herdr() {
@@ -251,7 +302,9 @@ cleanup() {
     herdr server stop >/dev/null 2>&1 || true
     herdr session delete "$SESSION" >/dev/null 2>&1 || true
   fi
-  rm -rf "$HOME_DIR" "$XDG_DIR" "$CONFIG" "$STATE" "$BIN"
+  rm -rf "$HOME_DIR" "$XDG_DIR" "$CONFIG" "$STATE"
+  rm -f "$ROOT/herdr-linux-x86_64" "$ROOT/herdr-linux-aarch64" \
+    "$ROOT/herdr-macos-aarch64" "$ROOT/herdr-macos-x86_64"
   printf 'pilot: cleaned own Herdr session/process/state; preserved pilot.sh, CHECKLIST.md, and evidence files\n'
 }
 
