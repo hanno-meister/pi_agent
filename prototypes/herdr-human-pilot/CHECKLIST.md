@@ -31,13 +31,13 @@ curl -fsSL https://raw.githubusercontent.com/hanno-meister/pi_agent/af2f5b2/prot
 
 ## Interactive observations
 
-- [ ] Pane focus is direct **Alt-h/j/k/l**; assess focus predictability. Keep **Ctrl-a** for non-pane actions.
-- Ctrl-h/j/k/l collide with terminal Backspace/Enter/control input, so pane focus uses Alt-h/j/k/l.
-- [ ] **Alt-n** creates a workspace and **Alt-w** opens the workspace picker; assess both actions.
-- Alt shortcuts may be intercepted by the outer terminal or OS; record the observed behavior rather than claiming a Herdr failure.
+- [ ] Pane focus is direct **Ctrl-h/j/k/l**; assess focus predictability. Keep **Ctrl-a** for non-pane actions.
+- Ctrl-h and Ctrl-j can be delivered as Backspace/Enter by terminals and might not work; these are user-selected bindings.
+- [ ] **Ctrl-n** creates a workspace and **Ctrl-w** opens the workspace picker; assess both actions.
+- Ctrl shortcuts may be intercepted by terminal line editing or the outer terminal/OS; record the observed behavior rather than claiming a Herdr failure.
 - Keybinding sweep: no duplicate configured chords; default bare h/j/k/l remain intentionally local to Navigate mode, while Ctrl-a remains the prefix for other native actions.
 - [ ] Mouse: assess selection/copy, pane resize, and scroll. Note whether mouse capture interferes with terminal selection.
-- [ ] Vi-like navigation: assess the direct Alt-h/j/k/l focus behavior; do not claim vi editor evidence.
+- [ ] Vi-like navigation: assess the direct Ctrl-h/j/k/l focus behavior; do not claim vi editor evidence.
 - [ ] Agent sidebar: observe named agents while working and idle; record any naturally occurring blocked/approval prompt only. Do not create unsafe approvals.
 - [ ] Inspect agent `list`, `get`, `explain`, and `read`; note working/idle/done/blocked behavior and whether attention is visible.
 - [ ] Detach/reattach: press **Ctrl-a q**, then from a second terminal run `./pilot.sh attach`.
