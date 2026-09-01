@@ -5,6 +5,7 @@ set -euo pipefail
 profile=/pi_agent/agent_profiles/pibrain
 
 exec pi \
-  --model openai-codex/gpt-5.6-sol \
+  --model openai-codex/gpt-5.6-luna \
+  --thinking high \
   --skill "$profile/skills/.agents/skills" \
   "$@"

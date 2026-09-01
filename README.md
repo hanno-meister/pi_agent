@@ -2,7 +2,7 @@
 
 My personal, containerized workstation for software development, coding agents, and a durable second brain.
 
-I built this project because I want the same environment on every machine I use: clone the repository, start Docker, and continue working. It combines my terminal and editor configuration with agent profiles, persistent state, private-project hydration, and smoke-tested safety boundaries.
+I built this project because I want the same environment on every machine I use: clone the repository, start Docker, and continue working. It combines my terminal and editor configuration with agent profiles, persistent tool state, browser-backed voice dictation, and smoke-tested safety boundaries. Private repositories and knowledge remain in ignored workspaces that I manage explicitly.
 
 It is also an inspectable record of how I approach agentic engineering: I build workflows where agents use tools, retrieve durable context, verify their work, and ask for approval before changing important knowledge.
 
@@ -12,13 +12,14 @@ Good agentic work includes knowing when to build and when to adapt. This reposit
 
 | Component | Purpose | Provenance |
 | --- | --- | --- |
-| Docker environment and workspace hydration | Reproduce the workstation and safely hydrate private repositories | Designed and developed by me |
+| Docker environment and runtime workspaces | Reproduce the workstation while keeping private repositories and knowledge outside the public repository | Designed and developed by me |
 | Neovim, tmux, and shell configuration | Provide my portable terminal development workflow | Configured and maintained by me, using third-party tools and plugins |
+| Browser-backed voice dictation | Add session-isolated, draft-only voice input to Pi | Designed and developed by me |
 | [`pibrain`](agent_profiles/pibrain/) | Operate and learn from a private PARA second brain | Original second-brain workflows developed by me with agent assistance; selected utility skills retained from Matt Pocock with attribution |
 | [`pimatt`](agent_profiles/pimatt/) | Provide general software-engineering workflows | Primarily curated from [Matt Pocock's skills](https://github.com/mattpocock/skills), with local integration and explicit attribution |
-| [`code`](agent_profiles/code/) | Run OpenCode with oh-my-opencode-slim orchestration | OpenCode and OMO Slim are installed packages; profile configuration is tracked locally and optional skills are installed manually |
+| [`code`](agent_profiles/code/) | Run OpenCode with oh-my-opencode-slim orchestration | Profile integration and local workflows are tracked here; selected Matt Pocock skills are bundled with attribution |
 
-Skills copied into `pibrain` and `pimatt` retain their upstream license, source path, and content hash under each profile's `skills/` directory. The `code` profile leaves optional third-party skill installation to the user.
+Skills copied into `pibrain`, `pimatt`, and `code` retain their upstream license, source path, and content hash under the applicable profile.
 
 ## Original-work highlight: `pibrain`
 
@@ -59,9 +60,14 @@ This is the kind of agentic work I am interested in: not a single clever prompt,
 
 ```mermaid
 flowchart LR
-    H["Host: Linux, Raspberry Pi, macOS, or WSL"] -->|"Docker Compose"| C["Persistent development container"]
+    H["Host: Linux, Raspberry Pi, macOS, or WSL"] --> DC["Docker Compose"]
+    DC --> C["Persistent development container"]
+    DC --> G["Voice gateway"]
+    B["Chrome microphone"] -->|"loopback or SSH tunnel"| G
+    G -->|"session-scoped draft transcript"| C
 
     R["Public Git repository"] --> C
+    R --> G
     R --> D["Authored dotfiles"]
     R --> P["Tracked agent profiles"]
 
@@ -71,14 +77,13 @@ flowchart LR
     P --> PM["pimatt: curated Pi coding workflows"]
     P --> PC["code: OpenCode + OMO Slim workflows"]
 
-    C --> V["Docker volumes: agent, editor, tmux, and OpenCode state"]
+    C --> V["Docker volumes: agent, editor, tmux, SSH, and OpenCode state"]
     C --> W["Ignored runtime workspaces"]
     W --> S["Private second brain"]
     W --> A["Private project repositories"]
-
 ```
 
-The public repository contains the environment and workflow definitions. Private knowledge and active project checkouts remain in ignored runtime paths.
+The public repository contains the environment and workflow definitions. Private knowledge and active project checkouts remain in ignored runtime paths and are never cloned or synchronized automatically. At startup, Graphify installs its Pi integration into the persistent agent volume.
 
 ## Design requirements
 
@@ -87,8 +92,8 @@ The public repository contains the environment and workflow definitions. Private
 - **Persistent:** retain generated Pi, Neovim, and tmux state in Docker volumes.
 - **Inspectable:** keep authored configuration, skills, and integration code in Git.
 - **Private by default:** exclude runtime projects and the second brain from the public repository.
-- **Conservative startup:** clone only missing repositories; never synchronize or rewrite existing checkouts.
-- **Failure tolerant:** report inaccessible remotes or invalid manifests without making the generic container unusable.
+- **Conservative startup:** never clone or synchronize private repositories automatically.
+- **Failure tolerant:** keep the core environment usable without provider credentials; report optional services as unconfigured.
 - **Human controlled:** require approval before agent workflows persist consequential knowledge changes.
 
 ## Quick start
@@ -97,7 +102,8 @@ The public repository contains the environment and workflow definitions. Private
 
 - Docker Engine and Docker Compose
 - Git
-- Optional access to private remotes
+
+Private-remote access is needed only for repositories you choose to clone into the ignored workspaces.
 
 Start the environment from the repository root:
 
@@ -148,15 +154,15 @@ cp .env.example .env
 docker compose up --build --detach
 ```
 
-The gateway binds only to the development host's loopback interface. From the machine running Chrome, forward it over SSH:
+The gateway binds only to the Docker host's loopback interface. If Chrome runs on that host, open `http://localhost:4317` directly. If Docker runs remotely, forward the port from the machine running Chrome:
 
 ```sh
 ssh -L 4317:localhost:4317 your-development-host
 ```
 
-Open `http://localhost:4317`, grant Chrome microphone permission, then click **Enable microphone**. This only arms the recorder browser. In an interactive Pi session, `Alt+R` and `/voice` are the only recording controls; Pi inserts the transcript into the draft without submitting it. Use `/voice-setup` to select `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, or `whisper-1` for only that Pi session.
+Then open `http://localhost:4317`, grant Chrome microphone permission, and click **Enable microphone**. This only arms the recorder browser. In an interactive Pi session, `Alt+R` and `/voice` are the only recording controls; Pi inserts the transcript into the draft without submitting it. Use `/voice-setup` to select `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, or `whisper-1` for only that Pi session.
 
-New sessions default to `gpt-4o-mini-transcribe`, English, and a 120-second recording limit. `.env.example` documents `VOICE_GATEWAY_PORT`, `VOICE_TRANSCRIPTION_MODEL`, `VOICE_LANGUAGE`, `VOICE_MAX_DURATION_SECONDS`, and `OPENAI_API_KEY`. Set `VOICE_GATEWAY_PORT` if 4317 conflicts, and use that port in both the Compose URL and SSH forwarding command. Invalid values fail before transcription.
+New sessions default to `gpt-4o-mini-transcribe`, English, and a 120-second recording limit. `.env.example` documents `VOICE_GATEWAY_PORT`, `VOICE_TRANSCRIPTION_MODEL`, `VOICE_LANGUAGE`, `VOICE_MAX_DURATION_SECONDS`, and `OPENAI_API_KEY`. Set `VOICE_GATEWAY_PORT` if 4317 conflicts, and use that port in both the browser URL and SSH forwarding command. Invalid values fail before transcription.
 
 #### Voice troubleshooting
 
@@ -178,16 +184,23 @@ I use this environment on:
 - macOS through Docker;
 - Windows through WSL.
 
-The Docker image explicitly supports `amd64` and `arm64`. Automated end-to-end verification currently runs on Linux:
+The Docker image explicitly supports `amd64` and `arm64`. Run the Linux end-to-end smoke test locally:
 
 ```sh
 tests/compose-smoke.sh
 ```
 
-The smoke test verifies startup without provider credentials, profile discovery, configuration symlinks, and Pi/OpenCode availability.
+It verifies startup without provider credentials, profile discovery, configuration symlinks, Pi/OpenCode availability, and voice-gateway integration. Voice behavior also has fast unit and syntax checks:
+
+```sh
+npm --prefix voice-input test
+npm --prefix voice-input run typecheck
+```
+
+GitHub Actions currently runs secret scanning; the Compose smoke test remains a local check.
 
 ## License and attribution
 
 My original work in this repository is available under the [MIT License](LICENSE). Third-party tools, plugins, and bundled material remain subject to their own licenses.
 
-The skills copied from [`mattpocock/skills`](https://github.com/mattpocock/skills) for `pibrain` and `pimatt` retain their MIT license and provenance records under those profiles' `skills/LICENSES/` and `skills/skills-lock.json` paths. `code` does not bundle them.
+The skills copied from [`mattpocock/skills`](https://github.com/mattpocock/skills) for `pibrain`, `pimatt`, and `code` retain their MIT license and provenance records under the applicable profile's `LICENSES/` or `skills/LICENSES/` directory and `skills-lock.json` file.
