@@ -24,6 +24,29 @@ Project `opencode.json` and `.opencode/` configuration load before the profile
 directory. When settings conflict, profile configuration wins; project agents,
 skills, and instructions remain available.
 
+## MCP configuration
+
+The profile-owned `opencode/mcp-defaults.jsonc` declares all four MCPs. Tavily
+is enabled by default; DeepWiki and the LangChain guides/reference MCPs are
+disabled by default. Set `TAVILY_API_KEY` outside tracked files; do not put the
+key in this profile or a repository configuration file.
+
+Repositories can opt in to an MCP by overriding only its `enabled` property in
+their `opencode.jsonc` or `.opencode/` configuration. For example:
+
+```jsonc
+{
+  "mcp": {
+    "deepwiki": {
+      "enabled": true
+    }
+  }
+}
+```
+
+Use the direct installed schema shape shown above: do not use `mcp.servers` or
+`disabled`. Restart OpenCode after changing MCP configuration.
+
 Interactive `code` launches choose a free high localhost port and pass matching
 `--port`/`OPENCODE_PORT` values so OMO can attach agent panes. Set
 `OPENCODE_PORT` or pass `--port` to override it. Non-interactive subcommands do

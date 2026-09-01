@@ -27,7 +27,7 @@
         "model": "openai/gpt-5.6-luna",
         "variant": "low",
         "skills": [],
-        "mcps": ["context7", "gh_grep"]
+        "mcps": ["context7", "gh_grep", "tavily", "deepwiki", "docs-langchain", "reference-langchain"]
       },
       "explorer": {
         "model": "openai/gpt-5.6-luna",
