@@ -56,10 +56,8 @@ RUN npm install --global tree-sitter-cli@0.25.10 \
         @earendil-works/pi-coding-agent@0.84.3 \
     && npm install --global opencode-ai@1.18.25
 
-RUN python3 -m pip install \
-    --no-cache-dir \
-    --break-system-packages \
-    graphifyy
+RUN UV_TOOL_BIN_DIR=/usr/local/bin uv tool install graphifyy==0.9.53 \
+    && uv cache clean
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY agent_profiles/pimatt/pimatt /usr/local/bin/pimatt

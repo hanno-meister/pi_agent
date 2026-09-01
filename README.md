@@ -83,7 +83,7 @@ flowchart LR
     W --> A["Private project repositories"]
 ```
 
-The public repository contains the environment and workflow definitions. Private knowledge and active project checkouts remain in ignored runtime paths and are never cloned or synchronized automatically. At startup, Graphify installs its Pi integration into the persistent agent volume.
+The public repository contains the environment and workflow definitions. Private knowledge and active project checkouts remain in ignored runtime paths and are never cloned or synchronized automatically. At startup, Graphify installs its Pi integration into the persistent agent volume and its OpenCode skill into the `code` profile.
 
 ## Design requirements
 

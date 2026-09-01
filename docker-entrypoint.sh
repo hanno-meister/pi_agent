@@ -4,6 +4,24 @@ set -eu
 # Install into the runtime-mounted Pi configuration volume.
 graphify install --platform pi
 
+# Generate Graphify's OpenCode-specific skill inside the code profile. Graphify's
+# project installer has no custom destination flag, so use a transient project
+# whose skill directory points at the profile and discard its project hook files.
+code_skills=/pi_agent/agent_profiles/code/opencode/skills
+if [ -d "$code_skills" ]; then
+  graphify_stage=$(mktemp -d)
+  mkdir -p "$graphify_stage/.opencode"
+  ln -s "$code_skills" "$graphify_stage/.opencode/skills"
+  if ! (
+    cd "$graphify_stage"
+    graphify install --project --platform opencode >/dev/null
+  ); then
+    rm -rf "$graphify_stage"
+    exit 1
+  fi
+  rm -rf "$graphify_stage"
+fi
+
 # The repository is mounted after the image is built. Keep the runtime launcher
 # synchronized with the mounted source instead of using a stale image copy.
 if [ -f /pi_agent/agent_profiles/code/code ]; then

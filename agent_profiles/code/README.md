@@ -1,6 +1,6 @@
 # Code profile
 
-OpenCode profile with oh-my-opencode-slim, locally developed workflows, and a tracked selection of attributed third-party skills. Additional skills are installed manually.
+OpenCode profile with oh-my-opencode-slim, Graphify, locally developed workflows, and a tracked selection of attributed third-party skills. Additional skills are installed manually.
 
 ## Start
 
@@ -41,7 +41,7 @@ opencode/
 ├── oh-my-opencode-slim.jsonc
 ├── agents/                       # profile-owned OpenCode agents
 ├── commands/                     # profile-owned OpenCode commands
-├── skills/                       # tracked, manual, and runtime OMO skills
+├── skills/                       # tracked, manual, Graphify, and runtime OMO skills
 └── oh-my-opencode-slim/          # profile-owned OMO prompt overrides
 ```
 
@@ -50,6 +50,13 @@ Its built-in agents remain package-owned. OMO-managed bundled skills are synced
 into this profile's `skills/` directory; their runtime metadata and bundled
 directories are ignored by Git. The repository also tracks selected Matt Pocock
 skills plus locally developed commit and pull-request workflows.
+
+## Graphify
+
+[Graphify](https://github.com/Graphify-Labs/graphify) is installed from the
+pinned `graphifyy` package in `Dockerfile`. Container startup generates its
+OpenCode-specific skill in `opencode/skills/graphify/`; the directory is
+runtime-managed and ignored by Git. Use `/graphify .` in `code`.
 
 ## Bundled skill attribution
 
@@ -87,8 +94,8 @@ provider exposes different IDs.
 
 ## Updates
 
-- OpenCode and Pi: versions are pinned in `Dockerfile`; update them there and
-  rebuild the image deliberately.
+- OpenCode, Pi, and Graphify: versions are pinned in `Dockerfile`; update them
+  there and rebuild the image deliberately.
 - OMO Slim: version `2.2.17` is pinned in the profile config and automatic
   updates are disabled; update the plugin and schema versions deliberately.
 - Tracked or manually installed skills: from this directory, update with

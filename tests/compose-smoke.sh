@@ -26,7 +26,7 @@ fi
 mkdir -p "$tmp/checkout"
 tar -C "$root" \
   --exclude=.git --exclude=.env --exclude=.scratch --exclude=node_modules --exclude=graphify-out \
-  --exclude=workspaces \
+  --exclude=agent_profiles/code/opencode/skills/graphify --exclude=workspaces \
   -cf - . | tar -C "$tmp/checkout" -xf -
 
 # The generic container must start without provider credentials or private-workspace
@@ -73,6 +73,9 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   grep -Fqx -- "OPENCODE_ENABLE_EXA=1" /tmp/code-smoke/environment; \
   test -f /pi_agent/agent_profiles/code/opencode/opencode.jsonc; \
   test -f /pi_agent/agent_profiles/code/opencode/tui.jsonc; \
+  test -f /pi_agent/agent_profiles/code/opencode/skills/graphify/SKILL.md; \
+  test -f /pi_agent/agent_profiles/code/opencode/skills/graphify/references/query.md; \
+  test "$(cat /pi_agent/agent_profiles/code/opencode/skills/graphify/.graphify_version)" = "0.9.53"; \
   test "$(readlink /pi_agent/agent_profiles/code/.agents/skills)" = "../opencode/skills"; \
   mkdir -p /pi_agent/agent_profiles/code/.agents/skills/manual-skill; \
   printf '%s\\n' '---' 'name: manual-skill' 'description: A manually installed skill.' '---' > /pi_agent/agent_profiles/code/.agents/skills/manual-skill/SKILL.md; \
