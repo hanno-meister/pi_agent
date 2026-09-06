@@ -106,6 +106,25 @@ function recorderHeaders(recorderId, extra = {}) {
   };
 }
 
+test("missing recorder error includes the voice page address", async (t) => {
+  const gateway = createVoiceGateway({
+    apiKey: "test-key",
+    voicePageUrl: "http://localhost:9876",
+  });
+  const gatewayUrl = await listen(gateway);
+  t.after(() => close(gateway));
+
+  await register(gatewayUrl, "session-a");
+  const result = await fetch(`${gatewayUrl}/api/sessions/session-a/toggle`, {
+    method: "POST",
+  });
+
+  assert.equal(result.status, 409);
+  assert.deepEqual(await result.json(), {
+    error: "Open the voice page at http://localhost:9876 and enable the microphone",
+  });
+});
+
 test("concurrent sessions cannot stop, duplicate, or receive another session's recording", async (t) => {
   let releaseTranscription;
   let upstreamBody;

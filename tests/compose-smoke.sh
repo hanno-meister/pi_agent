@@ -85,8 +85,14 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
 
 # Exercise two concurrent mini TUIs against shared, throwaway XDG roots.
 "${compose[@]}" -p "$project" exec -T pi bash /pi_agent/tests/code-mini-tmux-smoke.sh
-"${compose[@]}" -p "$project" exec -T pi test -L /root/.pi/agent/extensions/voice-input.js
-"${compose[@]}" -p "$project" exec -T pi sh -c 'test "$(readlink /root/.pi/agent/extensions/voice-input.js)" = /pi_agent/voice-input/extension-loader.js'
+"${compose[@]}" -p "$project" exec -T pi sh -c '\
+  set -e; \
+  test -f /root/.pi/agent/extensions/voice-input-loader.js; \
+  test ! -L /root/.pi/agent/extensions/voice-input-loader.js; \
+  test "$(cat /root/.pi/agent/extensions/voice-input-loader.js)" = "$(cat /pi_agent/voice-input/extension-loader.js)"; \
+  ! sh -c '\''printf stale > /root/.pi/agent/extensions/voice-input-loader.js'\''; \
+  test ! -e /root/.pi/agent/extensions/voice-input.js; \
+  test ! -L /root/.pi/agent/extensions/voice-input.js'
 "${compose[@]}" -p "$project" exec -T pi sh -c '\
   set -e; \
   node -e '"'"'
