@@ -96,7 +96,7 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   set -e; \
   node -e '"'"'
     const { spawnSync } = require("node:child_process");
-    const result = spawnSync("pi", ["--mode", "rpc"], {
+    const result = spawnSync("pimatt", ["--mode", "rpc"], {
       input: "{\"type\":\"get_commands\"}\n",
       encoding: "utf8",
     });
@@ -135,7 +135,7 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   grep -Fqx -- "/pi_agent/agent_profiles/pimatt/skills/.agents/skills" /tmp/pimatt-smoke/args; \
   grep -Fqx -- "--prompt-template" /tmp/pimatt-smoke/args; \
   grep -Fqx -- "/pi_agent/agent_profiles/pimatt/skills/.pi/prompts" /tmp/pimatt-smoke/args; \
-  grep -Fqx -- "--no-extensions" /tmp/pimatt-smoke/args; \
+  ! grep -Fqx -- "--no-extensions" /tmp/pimatt-smoke/args; \
   grep -Fqx -- "--extension" /tmp/pimatt-smoke/args; \
   grep -Fqx -- "/pi_agent/voice-input/extension-loader.js" /tmp/pimatt-smoke/args; \
   ! grep -Fqx -- "--no-skills" /tmp/pimatt-smoke/args'
@@ -149,7 +149,7 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   PATH=/tmp/pibrain-smoke/bin:$PATH /usr/local/bin/pibrain; \
   grep -Fqx -- "--skill" /tmp/pibrain-smoke/args; \
   grep -Fqx -- "/pi_agent/agent_profiles/pibrain/skills/.agents/skills" /tmp/pibrain-smoke/args; \
-  grep -Fqx -- "--no-extensions" /tmp/pibrain-smoke/args; \
+  ! grep -Fqx -- "--no-extensions" /tmp/pibrain-smoke/args; \
   grep -Fqx -- "--extension" /tmp/pibrain-smoke/args; \
   grep -Fqx -- "/pi_agent/voice-input/extension-loader.js" /tmp/pibrain-smoke/args; \
   ! grep -Fqx -- "--no-skills" /tmp/pibrain-smoke/args'

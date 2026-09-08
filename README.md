@@ -160,7 +160,7 @@ The gateway binds only to the Docker host's loopback interface. If Chrome runs o
 ssh -L 4317:localhost:4317 your-development-host
 ```
 
-Then open `http://localhost:4317`, grant Chrome microphone permission, and click **Enable microphone**. This only arms the recorder browser. In an interactive Pi session, `Alt+R` and `/voice` are the only recording controls; Pi inserts the transcript into the draft without submitting it. Use `/voice-setup` to select `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, or `whisper-1` for only that Pi session.
+Then open `http://localhost:4317`, grant Chrome microphone permission, and click **Enable microphone**. This only arms the recorder browser. Voice controls are available only in interactive Pi sessions started with the `pimatt` or `pibrain` profile launchers (not bare `pi`): `Alt+R` and `/voice` are the only recording controls; Pi inserts the transcript into the draft without submitting it. Use `/voice-setup` to select `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, or `whisper-1` for only that Pi session.
 
 New sessions default to `gpt-4o-mini-transcribe`, English, and a 120-second recording limit. `.env.example` documents `VOICE_GATEWAY_PORT`, `VOICE_TRANSCRIPTION_MODEL`, `VOICE_LANGUAGE`, `VOICE_MAX_DURATION_SECONDS`, and `OPENAI_API_KEY`. Set `VOICE_GATEWAY_PORT` if 4317 conflicts, and use that port in both the browser URL and SSH forwarding command. Invalid values fail before transcription.
 
@@ -204,3 +204,5 @@ GitHub Actions currently runs secret scanning; the Compose smoke test remains a 
 My original work in this repository is available under the [MIT License](LICENSE). Third-party tools, plugins, and bundled material remain subject to their own licenses.
 
 The skills copied from [`mattpocock/skills`](https://github.com/mattpocock/skills) for `pibrain`, `pimatt`, and `code` retain their MIT license and provenance records under the applicable profile's `LICENSES/` or `skills/LICENSES/` directory and `skills-lock.json` file.
+
+The Caveman skill/content © 2026 Julius Brussee is licensed under the MIT License. Its notice and provenance record are under `agent_profiles/code/LICENSES/` and `agent_profiles/code/opencode/skills-lock.json`.
