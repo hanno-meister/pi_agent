@@ -36,6 +36,7 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
 
 [ "$("${compose[@]}" -p "$project" ps --status running --services | sort)" = "$(printf 'pi\nvoice-gateway')" ]
 "${compose[@]}" -p "$project" exec -T pi bash -lc 'test -n "$BASH_VERSION"'
+"${compose[@]}" -p "$project" exec -T pi sh -c 'command -v ps >/dev/null'
 "${compose[@]}" -p "$project" exec -T pi test -L /root/.bashrc
 "${compose[@]}" -p "$project" exec -T pi test -L /root/.config/nvim
 "${compose[@]}" -p "$project" exec -T pi test -L /root/.config/tmux
@@ -87,12 +88,10 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
 "${compose[@]}" -p "$project" exec -T pi bash /pi_agent/tests/code-mini-tmux-smoke.sh
 "${compose[@]}" -p "$project" exec -T pi sh -c '\
   set -e; \
-  test -f /root/.pi/agent/extensions/voice-input-loader.js; \
-  test ! -L /root/.pi/agent/extensions/voice-input-loader.js; \
-  test "$(cat /root/.pi/agent/extensions/voice-input-loader.js)" = "$(cat /pi_agent/voice-input/extension-loader.js)"; \
-  ! sh -c '\''printf stale > /root/.pi/agent/extensions/voice-input-loader.js'\''; \
   test ! -e /root/.pi/agent/extensions/voice-input.js; \
-  test ! -L /root/.pi/agent/extensions/voice-input.js'
+  test ! -L /root/.pi/agent/extensions/voice-input.js; \
+  test ! -e /root/.pi/agent/extensions/voice-input-loader.js; \
+  test ! -L /root/.pi/agent/extensions/voice-input-loader.js'
 "${compose[@]}" -p "$project" exec -T pi sh -c '\
   set -e; \
   node -e '"'"'
@@ -136,6 +135,9 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   grep -Fqx -- "/pi_agent/agent_profiles/pimatt/skills/.agents/skills" /tmp/pimatt-smoke/args; \
   grep -Fqx -- "--prompt-template" /tmp/pimatt-smoke/args; \
   grep -Fqx -- "/pi_agent/agent_profiles/pimatt/skills/.pi/prompts" /tmp/pimatt-smoke/args; \
+  grep -Fqx -- "--no-extensions" /tmp/pimatt-smoke/args; \
+  grep -Fqx -- "--extension" /tmp/pimatt-smoke/args; \
+  grep -Fqx -- "/pi_agent/voice-input/extension-loader.js" /tmp/pimatt-smoke/args; \
   ! grep -Fqx -- "--no-skills" /tmp/pimatt-smoke/args'
 
 # pibrain loads the tracked second-brain skills while preserving native discovery.
@@ -147,4 +149,7 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   PATH=/tmp/pibrain-smoke/bin:$PATH /usr/local/bin/pibrain; \
   grep -Fqx -- "--skill" /tmp/pibrain-smoke/args; \
   grep -Fqx -- "/pi_agent/agent_profiles/pibrain/skills/.agents/skills" /tmp/pibrain-smoke/args; \
+  grep -Fqx -- "--no-extensions" /tmp/pibrain-smoke/args; \
+  grep -Fqx -- "--extension" /tmp/pibrain-smoke/args; \
+  grep -Fqx -- "/pi_agent/voice-input/extension-loader.js" /tmp/pibrain-smoke/args; \
   ! grep -Fqx -- "--no-skills" /tmp/pibrain-smoke/args'

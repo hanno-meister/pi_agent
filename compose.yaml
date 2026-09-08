@@ -21,7 +21,6 @@ services:
     volumes:
       - .:/pi_agent
       - pi-agent:/root/.pi/agent
-      - ./voice-input/extension-loader.js:/root/.pi/agent/extensions/voice-input-loader.js:ro
       - opencode-data:/root/.local/share/opencode
       - opencode-cache:/root/.cache/opencode
       - opencode-state:/root/.local/state/opencode

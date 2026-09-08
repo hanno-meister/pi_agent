@@ -40,8 +40,10 @@ fi
 
 mkdir -p /root/.config /root/.ssh /root/.pi/agent/extensions
 chmod 700 /root/.ssh
-# Remove the pre-migration path from persistent Pi configuration volumes.
-rm -f /root/.pi/agent/extensions/voice-input.js
+# Remove legacy voice extensions from persistent Pi configuration volumes.
+rm -f \
+  /root/.pi/agent/extensions/voice-input.js \
+  /root/.pi/agent/extensions/voice-input-loader.js
 rm -f /root/.bashrc
 rm -rf /root/.config/nvim /root/.config/tmux
 ln -s /pi_agent/dotfiles/bash/bashrc /root/.bashrc

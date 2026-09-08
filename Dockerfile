@@ -21,6 +21,7 @@ RUN apt-get update \
         gh \
         ncurses-term \
         openssh-client \
+        procps \
         python3 \
         python3-pip \
         ripgrep \
@@ -64,11 +65,6 @@ COPY agent_profiles/pimatt/pimatt /usr/local/bin/pimatt
 COPY agent_profiles/pibrain/pibrain /usr/local/bin/pibrain
 COPY agent_profiles/code/code /usr/local/bin/code
 RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh /usr/local/bin/pimatt /usr/local/bin/pibrain /usr/local/bin/code
-
-# Seed the named Pi configuration volume so file mounts below have a stable
-# destination when the volume is created for the first time.
-RUN mkdir -p /root/.pi/agent/extensions \
-    && touch /root/.pi/agent/extensions/voice-input-loader.js
 
 WORKDIR /pi_agent/workspaces
 

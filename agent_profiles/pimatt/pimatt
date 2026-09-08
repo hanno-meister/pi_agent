@@ -6,6 +6,8 @@ profile=/pi_agent/agent_profiles/pimatt
 
 exec pi \
   --model openai-codex/gpt-5.6-sol \
+  --no-extensions \
+  --extension /pi_agent/voice-input/extension-loader.js \
   --skill "$profile/skills/.agents/skills" \
   --prompt-template "$profile/skills/.pi/prompts" \
   "$@"
