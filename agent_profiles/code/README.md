@@ -115,6 +115,15 @@ The OpenAI preset uses the model IDs published by OMO Slim. Check the model
 list and adjust `opencode/oh-my-opencode-slim.jsonc` if the authenticated
 provider exposes different IDs.
 
+## Preset selection
+
+Set the top-level `preset` in `opencode/oh-my-opencode-slim.jsonc` to
+`openai`, `anthropic`, or `openrouter-free`; this profile currently uses
+`openai`.
+The Anthropic mappings are placeholders and must be replaced with model IDs
+available to your account. For OpenRouter, run `/connect`, then verify
+availability with `/models` before replacing the placeholders.
+
 ## Updates
 
 - OpenCode, Pi, and Graphify: versions are pinned in `Dockerfile`; update them
