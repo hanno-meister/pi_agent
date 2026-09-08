@@ -17,10 +17,10 @@ Read [proposal-format.md](references/proposal-format.md) before presenting conte
 
 Treat learning as a narrow, active loop rather than an open-ended interview:
 
-- **Grill:** use targeted questions to resolve low-fidelity uncertainty—definitions, prerequisites, distinctions, and reasoning steps answerable through retrieval or explanation.
-- **Build/test:** when understanding depends on seeing behavior, making a trade-off, using a tool, or producing an artifact, switch to a focused practice task, worked example, prototype, or experiment. Bring the result back into the visible learning path.
-- **Handoff:** carry the goal, scope, decisions, unresolved questions, evidence, and practice result between phases. If a fresh context is necessary, create a compact handoff first.
-- **Steer:** the learner controls direction and scope; the agent asks useful questions, accepts narrowing or deferral, and stops probing when the prerequisite frontier is clear.
+- Use targeted questions to resolve low-fidelity uncertainty—definitions, prerequisites, distinctions, and reasoning steps answerable through retrieval or explanation.
+- When understanding depends on seeing behavior, making a trade-off, using a tool, or producing an artifact, switch to a focused practice task, worked example, prototype, or experiment. Bring the result back into the visible learning path.
+- Carry the goal, scope, decisions, unresolved questions, evidence, and practice result between phases. If a fresh context is necessary, create a compact context transfer first.
+- The learner controls direction and scope; ask useful questions, accept narrowing or deferral, and stop probing when the prerequisite frontier is clear.
 
 ## Hard boundaries
 
@@ -74,7 +74,7 @@ Use the learner model only as a starting hypothesis. Re-probe prior capability w
 1. Begin with 3–5 independent broad questions across likely prerequisite strands.
 2. Multiple choice is appropriate for fast mapping; keep options neutral and accept `I don't know` without penalty.
 3. Follow adaptively with individual questions or small batches. Keep the learner active: invite correction, redirection, narrowing, or deferral when a question is off-scope.
-4. Include free-response explanation, a worked problem, or project-specific application before treating understanding as demonstrated. When a gap is build/test rather than grillable, mark it for a focused practice task instead of extending the interview.
+4. Include free-response explanation, a worked problem, or project-specific application before treating understanding as demonstrated. When a gap requires an artifact or action rather than explanation, mark it for a focused practice task instead of extending the interview.
 5. Grade answers diagnostically. Give brief correctness feedback, but postpone substantial teaching until planning.
 6. Stop probing when the prerequisite frontier is clear enough to plan; do not quiz for ceremony.
 
@@ -85,7 +85,7 @@ Use the learner model only as a starting hypothesis. Re-probe prior capability w
 3. Include only knowledge needed to perform the target skill or understand the next inference.
 4. Show:
    - the reasoning units in order;
-   - which units are grillable and which require build/test practice;
+   - which units can be answered through questioning and which require practice;
    - known prerequisite gaps;
    - the final success check;
    - expected scope or time box;
@@ -102,7 +102,7 @@ For each **reasoning unit**:
 1. Teach one tightly scoped concept or inferential step, adapted to the confirmed teaching profile and current answers.
 2. Make acquisition easy: remove incidental difficulty and use compact citations beside material factual claims.
 3. Invite questions and answer them before advancing.
-4. Make practice effortful: ask the user to apply, derive, explain, compare, debug, or otherwise retrieve the idea without answer-shaping clues. For build/test units, use the smallest useful artifact, prototype, experiment, or project action and feed its result back into the plan.
+4. Make practice effortful: ask the user to apply, derive, explain, compare, debug, or otherwise retrieve the idea without answer-shaping clues. For practical units, use the smallest useful artifact, prototype, experiment, or project action and feed its result back into the plan.
 5. Give direct feedback and determine whether understanding is `demonstrated`, `partially demonstrated`, or `not tested`.
 6. Advance only after an appropriate check or the user's explicit decision to move on.
 
