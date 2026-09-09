@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createVoiceExtension } from "../extension.js";
+import loadedVoiceExtension from "../extension-loader.js";
 
 function fakePi() {
   const commands = new Map();
@@ -32,6 +33,17 @@ function response(status, value) {
     headers: { "content-type": "application/json" },
   });
 }
+
+test("the extension loader default export is a callable Pi extension", () => {
+  const pi = fakePi();
+
+  assert.equal(typeof loadedVoiceExtension, "function");
+  loadedVoiceExtension(pi);
+
+  assert.ok(pi.commands.has("voice"));
+  assert.ok(pi.commands.has("voice-setup"));
+  assert.ok(pi.shortcuts.has("alt+r"));
+});
 
 async function eventually(check) {
   const deadline = Date.now() + 1000;

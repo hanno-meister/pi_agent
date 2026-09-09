@@ -125,6 +125,10 @@ export function createVoiceGateway(overrides = {}) {
       overrides.uploadArrivalGraceMs ?? defaultUploadArrivalGraceMs,
     uploadBytesPerSecond:
       overrides.uploadBytesPerSecond ?? defaultUploadBytesPerSecond,
+    voicePageUrl:
+      overrides.voicePageUrl ??
+      process.env.VOICE_PAGE_URL ??
+      `http://localhost:${process.env.VOICE_GATEWAY_PORT ?? 4317}`,
   };
   if (!Number.isFinite(options.transcriptionTimeoutMs) || options.transcriptionTimeoutMs <= 0) {
     throw new Error("Transcription timeout must be a positive finite number");
@@ -292,7 +296,9 @@ export function createVoiceGateway(overrides = {}) {
       }
       const lease = currentRecorderLease();
       if (!lease || !recorderIsAvailable()) {
-        json(response, 409, { error: "Open the voice page and enable the microphone" });
+        json(response, 409, {
+          error: `Open the voice page at ${options.voicePageUrl} and enable the microphone`,
+        });
         return;
       }
       const session = sessions.get(sessionId);

@@ -8,7 +8,8 @@ bun.lockb
 # OMO Slim runtime reconciliation metadata.
 .oh-my-opencode-slim/
 
-# OMO Slim bundled skills are package-managed. Other skills are manually installed.
+# Runtime-managed skills. Other skills are manually installed and tracked.
+skills/graphify/
 skills/codemap/
 skills/clonedeps/
 skills/deepwork/

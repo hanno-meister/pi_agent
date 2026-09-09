@@ -30,10 +30,10 @@ their inclusion is established.
 
 ## Write the message
 
-Use Conventional Commit style:
+Use Conventional Commit style with a type-only prefix:
 
 ```text
-<type>[optional scope]: <description>
+<type>: <description>
 
 [optional body]
 
@@ -41,10 +41,10 @@ Use Conventional Commit style:
 ```
 
 Treat 50 characters as the target for the complete subject, including its
-prefix. Use a lowercase type and scope; capitalize the imperative description:
+prefix. Use a lowercase type; capitalize the imperative description:
 
 ```text
-fix(parser): Handle empty input
+fix: Handle empty input
 ```
 
 Apply these rules:

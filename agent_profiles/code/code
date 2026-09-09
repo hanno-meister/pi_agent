@@ -8,10 +8,11 @@ if [ ! -d "$profile/opencode" ]; then
   exit 1
 fi
 
-# Make this profile the scoped OpenCode config. Project configuration loads
-# first; conflicting profile settings override it.
+# Keep profile-owned agents, settings, and plugins in the config directory.
+# Load MCP defaults separately so project config can override MCP enablement.
 export OPENCODE_CONFIG_DIR="$profile/opencode"
-unset OPENCODE_CONFIG OPENCODE_CONFIG_CONTENT
+export OPENCODE_CONFIG="$profile/opencode/mcp-defaults.jsonc"
+unset OPENCODE_CONFIG_CONTENT
 unset OPENCODE_TUI_CONFIG OPENCODE_DISABLE_PROJECT_CONFIG
 
 # OMO Slim's background scheduler and web search are profile-only settings.
