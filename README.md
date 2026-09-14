@@ -142,7 +142,7 @@ Copy the example environment file and set only what the current machine needs:
 cp .env.example .env
 ```
 
-Available settings include provider credentials and Git author identity. `.env` is ignored, and the container starts without provider credentials.
+Available settings include provider credentials and Git author identity. Every entry in `.env` is forwarded to the `pi` container, so a new credential needs no `compose.yaml` change; the `voice-gateway` service keeps its own narrow list. `.env` is ignored by Git, it is optional, and the container starts without provider credentials when it is absent.
 
 ### Voice dictation
 

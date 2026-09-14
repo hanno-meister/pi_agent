@@ -76,6 +76,9 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   test -f /pi_agent/agent_profiles/code/opencode/tui.jsonc; \
   test -f /pi_agent/agent_profiles/code/opencode/skills/graphify/SKILL.md; \
   test -f /pi_agent/agent_profiles/code/opencode/skills/graphify/references/query.md; \
+  test -f /pi_agent/agent_profiles/code/opencode/skills/langgraph-fundamentals/SKILL.md; \
+  test -f /pi_agent/agent_profiles/code/opencode/skills/langsmith-trace/SKILL.md; \
+  test -f /pi_agent/agent_profiles/code/opencode/oh-my-opencode-slim/langchain-expert.md; \
   test "$(cat /pi_agent/agent_profiles/code/opencode/skills/graphify/.graphify_version)" = "0.9.53"; \
   test "$(readlink /pi_agent/agent_profiles/code/.agents/skills)" = "../opencode/skills"; \
   mkdir -p /pi_agent/agent_profiles/code/.agents/skills/manual-skill; \

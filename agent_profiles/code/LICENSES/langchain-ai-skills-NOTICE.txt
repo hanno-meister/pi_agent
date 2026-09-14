@@ -1,0 +1,43 @@
+Attribution notice: LangChain and LangSmith agent skills
+=========================================================
+
+Twenty-five skills vendored into `agent_profiles/code/opencode/skills/` are
+copied from two upstream repositories published by LangChain (LangChain, Inc.):
+
+  https://github.com/langchain-ai/langchain-skills
+    commit b7a2a8fc363d1711456f83d24230535c9fff93eb (2026-08-29)
+    22 skills: deep-agents-core, deep-agents-memory,
+    deep-agents-orchestration, deepagents-python-quickstart,
+    deepagents-typescript-quickstart, ecosystem-primer, eval-engineering,
+    langchain-dependencies, langchain-fundamentals, langchain-middleware,
+    langchain-python-quickstart, langchain-rag,
+    langchain-typescript-quickstart, langgraph-cli, langgraph-fundamentals,
+    langgraph-human-in-the-loop, langgraph-persistence,
+    langgraph-python-quickstart, langgraph-typescript-quickstart,
+    langsmith-online-eval-engineering, managed-deep-agents, swarm
+
+  https://github.com/langchain-ai/langsmith-skills
+    commit 9e353767dfc4d465186417fb193f2f3ae6a609fa (2026-09-13)
+    3 skills: langsmith-dataset, langsmith-evaluator, langsmith-trace
+
+No license is declared upstream
+-------------------------------
+
+As of 2026-09-14, neither repository contains a LICENSE file and the GitHub API
+reports no license for either one. These skills are therefore vendored here
+WITHOUT a grant of license from the copyright holder; copyright remains with
+LangChain, Inc. and its contributors.
+
+They are retained in this repository only as agent prompt material for the
+local `code` profile, attributed to their source. They are not redistributed as
+part of a product, not modified, and not relicensed. Exact source paths and
+content hashes for each skill are recorded in
+`agent_profiles/code/skills-lock.json`.
+
+If upstream later publishes a license, replace this notice with the license
+text and the usual attribution. If redistribution of this repository outside
+its current private use is ever intended, remove these skills or obtain
+permission first.
+
+Reinstall or update them with the commands in
+`agent_profiles/code/README.md` ("Add or update skills").

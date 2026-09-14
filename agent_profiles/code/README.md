@@ -81,6 +81,35 @@ pinned `graphifyy` package in `Dockerfile`. Container startup generates its
 OpenCode-specific skill in `opencode/skills/graphify/`; the directory is
 runtime-managed and ignored by Git. Use `/graphify .` in `code`.
 
+## LangChain expert agent
+
+A profile-owned subagent `langchain-expert` specializes in LangChain, LangGraph,
+LangSmith, and Deep Agents. The orchestrator routes ecosystem work to it and
+passes the repository root, files, error text, and any LangSmith trace ids,
+because subagents run in an isolated context.
+
+It holds the 25 LangChain-ecosystem skills exclusively: every preset's
+`orchestrator.skills` array lists each of them with a `"!name"` deny, so the
+orchestrator never loads them. OpenCode filters an agent's advertised skills by
+permission, so the denied skills cost the orchestrator no prompt tokens. Exact
+names are used instead of a `langchain-*` glob because wildcard matching in
+skill permission keys is unverified. The agent also gets `diagnosing-bugs`,
+`verification-planning`, and `tdd`.
+
+The agent's system prompt lives at
+`opencode/oh-my-opencode-slim/langchain-expert.md`; OMO Slim loads
+`oh-my-opencode-slim/<agent-name>.md` automatically, and the config's `prompt`
+key is deliberately unset because an inline prompt would override the file.
+Custom agents must be declared under the top-level `agents` key in
+`oh-my-opencode-slim.jsonc`, since OMO reads custom agent names only from there;
+its per-preset model lives in each `presets.<preset>.langchain-expert` block
+(top-level `agents` wins over the preset layer, so `model` is omitted there).
+
+It accesses three MCPs: `docs-langchain`, `reference-langchain`, and
+`langsmith`. The `langsmith` MCP requires `LANGSMITH_API_KEY` to be set in the
+Compose environment (`.env`); it is absent by default and tracing tools will
+not function until it is provided.
+
 ## Bundled skill attribution
 
 Selected skills are copied from
@@ -88,6 +117,13 @@ Selected skills are copied from
 License. Their source paths and content hashes are recorded in
 `skills-lock.json`; the license text is in
 `LICENSES/mattpocock-skills-MIT.txt`.
+
+Twenty-five additional skills from
+[langchain-ai/langchain-skills](https://github.com/langchain-ai/langchain-skills)
+and [langchain-ai/langsmith-skills](https://github.com/langchain-ai/langsmith-skills)
+are installed and attributed in `LICENSES/langchain-ai-skills-NOTICE.txt`. These
+repositories do not declare a license at the repository level.
+
 
 ## Add or update skills
 
@@ -97,6 +133,16 @@ Choose additional Matt Pocock skills interactively:
 cd /pi_agent/agent_profiles/code
 npx skills@latest add mattpocock/skills -a opencode
 ```
+
+Install LangChain, LangGraph, and LangSmith skills (25 total) for the
+`langchain-expert` agent:
+
+```sh
+cd /pi_agent/agent_profiles/code
+npx skills@latest add langchain-ai/langchain-skills --skill '*' -a opencode
+npx skills@latest add langchain-ai/langsmith-skills --skill '*' -a opencode
+```
+
 
 This is a project-scoped skills-cli install, not a global install. The
 `.agents/skills` adapter routes selected files into `opencode/skills/`, where

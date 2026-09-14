@@ -15,15 +15,23 @@
       "enabled": false,
       "url": "https://mcp.deepwiki.com/mcp"
     },
+    // Enabled at the server level so @langchain-expert (and @librarian) can use
+    // them; per-agent `mcps` lists keep them off every other agent.
     "docs-langchain": {
       "type": "remote",
-      "enabled": false,
+      "enabled": true,
       "url": "https://docs.langchain.com/mcp"
     },
     "reference-langchain": {
       "type": "remote",
-      "enabled": false,
+      "enabled": true,
       "url": "https://reference.langchain.com/mcp"
+    },
+    "langsmith": {
+      "type": "remote",
+      "url": "https://api.smith.langchain.com/mcp",
+      "enabled": true,
+      "headers": { "X-Api-Key": "{env:LANGSMITH_API_KEY}" }
     }
   }
 }
