@@ -83,7 +83,15 @@
       },
       "langchain-expert": {
         "model": "openai/gpt-5.6-luna",
-        "variant": "high"
+        "variant": "high",
+        "mcps": [
+          "context7",
+          "gh_grep",
+          "tavily",
+          "deepwiki",
+          "docs-langchain",
+          "reference-langchain"
+        ]
       }
     },
     "anthropic": {
