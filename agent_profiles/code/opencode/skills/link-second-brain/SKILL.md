@@ -1,24 +1,28 @@
 ---
-description: Link the current code repository to a second-brain project
+name: link-second-brain
+description: Link the current code repository to a second-brain project.
+disable-model-invocation: true
 argument-hint: "[@project-index-or-folder]"
 ---
 
 Link the current code repository to a related project under
 `/pi_agent/workspaces/second_brain/10-projects/`.
 
-Requested project path: `${ARGUMENTS:-none supplied}`
+Treat text supplied after `/skill:link-second-brain` as the requested project
+path. If the user supplied a project path or `index.md`, use it as the requested
+project. Accept a leading `@` used by file references.
 
 Follow this procedure:
 
 1. Determine the current repository root with Git. If the current directory is
    not in a Git repository, ask before using the current directory instead.
-2. Resolve the requested project from a supplied project directory or its
-   `index.md`. Accept a leading `@` used by Pi file references. The resolved
-   project must be a direct child directory of
+2. Resolve the requested project from the supplied project directory or its
+   `index.md`. The resolved project must be a direct child directory of
    `/pi_agent/workspaces/second_brain/10-projects/` and contain an `index.md`.
-   - If no project was supplied, list the valid projects and ask me to choose.
+   - If no project was supplied, list the valid projects and ask the user to
+     choose.
    - If the path is ambiguous, invalid, or points outside that directory, ask
-     me to choose; do not guess.
+     the user to choose; do not guess.
 3. Read the selected project's `index.md` to verify it and obtain its project
    title or purpose. Do not inspect unrelated second-brain projects.
 4. Create or update `AGENTS.md` at the repository root. Preserve all unrelated
@@ -43,3 +47,6 @@ Follow this procedure:
    exists, stop and ask before repairing the malformed block.
 6. Report the selected project and the path of the changed `AGENTS.md`. Do not
    modify the second-brain project or create reciprocal links.
+
+Done when one valid project has been verified and the repository root contains
+exactly one complete managed block for it.

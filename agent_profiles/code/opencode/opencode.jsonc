@@ -8,6 +8,16 @@
   "default_agent": "orchestrator",
   "lsp": true,
 
+  // Keep the profile on the Compose-injected .env credential. This takes
+  // precedence over an older provider credential persisted by OpenCode.
+  "provider": {
+    "openai": {
+      "options": {
+        "apiKey": "{env:OPENAI_API_KEY}"
+      }
+    }
+  },
+
   "agent": {
     "build": {
       "disable": true

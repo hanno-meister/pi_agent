@@ -11,6 +11,14 @@ pibrain
 
 `pibrain` explicitly loads `skills/.agents/skills/` because recursive discovery skips dot-prefixed directories. The profile includes ingestion, ordinary knowledge reconciliation, learning, linting, primary-page management, and vault-query workflows.
 
+## Tavily MCP
+
+The profile loads the pinned `pi-mcp-adapter` extension and its tracked
+`mcp.json`, which enables Tavily lazily through the adapter's compact `mcp`
+tool. Set `TAVILY_API_KEY` in the repository's ignored `.env`, rebuild the
+container, then restart `pibrain`. Use `/mcp` to inspect connection status.
+Never put the key in tracked MCP configuration.
+
 ## Choose a workflow
 
 Use `/skill:ask-pibrain` when unsure which second-brain flow fits. The router is user-invoked, so it adds no model-invocation context. Engineering build flows remain in `pimatt`; Pibrain retains only dependency-complete utilities useful during knowledge work.

@@ -18,7 +18,9 @@ OMO Slim background subagents and Exa search, then forwards all arguments to
 
 Only configuration is profile-scoped. OpenCode's runtime, authentication,
 session, database, and cache state remain native/shared; this launcher does not
-create per-pane directories or copy auth and preference files.
+create per-pane directories or copy auth and preference files. OpenAI requests
+explicitly use the Compose-injected `OPENAI_API_KEY`, so an older OpenCode
+credential in `auth.json` cannot override `.env`.
 
 Project `opencode.json` and `.opencode/` configuration load before the profile
 directory. When settings conflict, profile configuration wins; project agents,
@@ -81,6 +83,13 @@ pinned `graphifyy` package in `Dockerfile`. Container startup generates its
 OpenCode-specific skill in `opencode/skills/graphify/`; the directory is
 runtime-managed and ignored by Git. Use `/graphify .` in `code`.
 
+## Second-brain linking
+
+Use `/skill:link-second-brain [@project]` to record one related second-brain
+project in the current repository's root `AGENTS.md`. The user-invoked skill
+lives in `opencode/skills/link-second-brain/` and is available only through the
+`code` profile.
+
 ## LangChain expert agent
 
 A profile-owned subagent `langchain-expert` specializes in LangChain, LangGraph,
@@ -124,7 +133,6 @@ and [langchain-ai/langsmith-skills](https://github.com/langchain-ai/langsmith-sk
 are installed and attributed in `LICENSES/langchain-ai-skills-NOTICE.txt`. These
 repositories do not declare a license at the repository level.
 
-
 ## Add or update skills
 
 Choose additional Matt Pocock skills interactively:
@@ -143,23 +151,23 @@ npx skills@latest add langchain-ai/langchain-skills --skill '*' -a opencode
 npx skills@latest add langchain-ai/langsmith-skills --skill '*' -a opencode
 ```
 
-
 This is a project-scoped skills-cli install, not a global install. The
 `.agents/skills` adapter routes selected files into `opencode/skills/`, where
 only the `code` profile discovers them. The installer updates
 `skills-lock.json` beside this README. Review skill and lock-file changes before
 committing them. `/root/.agents/skills` remains untouched.
 
-Then authenticate and refresh models:
+Refresh the provider model list:
 
 ```sh
-code auth login
 code models --refresh
 ```
 
-The OpenAI preset uses the model IDs published by OMO Slim. Check the model
-list and adjust `opencode/oh-my-opencode-slim.jsonc` if the authenticated
-provider exposes different IDs.
+OpenAI requests use `OPENAI_API_KEY` from the Compose environment (`.env`);
+`code auth login` is only needed when authenticating another provider. The
+OpenAI preset uses the model IDs published by OMO Slim. Check the model list
+and adjust `opencode/oh-my-opencode-slim.jsonc` if the provider exposes
+different IDs.
 
 ## Preset selection
 

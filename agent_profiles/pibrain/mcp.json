@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "tavily": {
+      "url": "https://mcp.tavily.com/mcp/",
+      "auth": "bearer",
+      "bearerTokenEnv": "TAVILY_API_KEY"
+    }
+  }
+}
