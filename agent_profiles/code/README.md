@@ -92,10 +92,13 @@ lives in `opencode/skills/link-second-brain/` and is available only through the
 
 ## LangChain expert agent
 
-A profile-owned subagent `langchain-expert` specializes in LangChain, LangGraph,
-LangSmith, and Deep Agents. The orchestrator routes ecosystem work to it and
-passes the repository root, files, error text, and any LangSmith trace ids,
-because subagents run in an isolated context.
+A profile-owned, read-only, on-demand subagent `langchain-expert` specializes in
+LangChain, LangGraph, LangSmith, and Deep Agents. It investigates through
+repository inspection and its dedicated MCPs; it is not an implementation
+writer. The orchestrator routes ecosystem work to it, passes the repository
+root, files, error text, and any LangSmith trace ids because subagents run in an
+isolated context, and receives an implementation-ready, evidence-backed
+handoff for the orchestrator or fixer.
 
 It holds the 25 LangChain-ecosystem skills exclusively: every preset's
 `orchestrator.skills` array lists each of them with a `"!name"` deny, so the
