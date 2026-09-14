@@ -115,9 +115,15 @@ its per-preset model lives in each `presets.<preset>.langchain-expert` block
 (top-level `agents` wins over the preset layer, so `model` is omitted there).
 
 It accesses three MCPs: `docs-langchain`, `reference-langchain`, and
-`langsmith`. The `langsmith` MCP requires `LANGSMITH_API_KEY` to be set in the
-Compose environment (`.env`); it is absent by default and tracing tools will
-not function until it is provided.
+`langsmith`. The `langsmith` MCP uses EU LangSmith OAuth; no API key is
+configured or supplied by this profile. After changing MCP configuration,
+restart OpenCode, then authenticate interactively with:
+
+```sh
+opencode mcp auth langsmith
+```
+
+Complete the browser OAuth flow before using the LangSmith tools.
 
 ## Bundled skill attribution
 

@@ -33,6 +33,10 @@ outside your lane.
    `reference-langchain` for exact class/method/parameter signatures and
    `docs-langchain` for concepts, guides, and migration notes. Prefer these over
    memory. Read the installed package source when docs are ambiguous.
+   The `langsmith` MCP uses the EU endpoint and OAuth. If its connection is not
+   authenticated, restart OpenCode after MCP configuration changes and run
+   `opencode mcp auth langsmith` to complete the browser OAuth flow. Do not
+   supply a LangSmith API key for this MCP.
 3. **Load skills progressively.** If the task spans multiple frameworks or is
    ambiguous, load the `ecosystem-primer` skill FIRST to choose the right
    framework and the right next skill. Otherwise load the specific skill that

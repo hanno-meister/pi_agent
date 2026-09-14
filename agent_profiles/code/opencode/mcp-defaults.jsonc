@@ -29,9 +29,8 @@
     },
     "langsmith": {
       "type": "remote",
-      "url": "https://api.smith.langchain.com/mcp",
-      "enabled": true,
-      "headers": { "X-Api-Key": "{env:LANGSMITH_API_KEY}" }
+      "url": "https://eu.api.smith.langchain.com/mcp",
+      "enabled": true
     }
   }
 }
