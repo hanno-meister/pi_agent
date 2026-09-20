@@ -117,6 +117,13 @@ Custom agents must be declared under the top-level `agents` key in
 its per-preset model lives in each `presets.<preset>.langchain-expert` block
 (top-level `agents` wins over the preset layer, so `model` is omitted there).
 
+Its local access is limited to `read`, `grep`, `glob`, `list`, and `lsp`; edit,
+bash, task, and webfetch are denied. Generic or current-library research routes
+to `@librarian`, broad repository navigation to `@explorer`, ordinary
+implementation to the parent or `@fixer`, and UI work to `@designer`. Its
+structured handoff is conditional: it reports findings without forcing a root
+cause, and includes exact proposed changes only when warranted.
+
 It accesses three MCPs: `docs-langchain`, `reference-langchain`, and
 `langsmith`. The `langsmith` MCP uses EU LangSmith OAuth; no API key is
 configured or supplied by this profile. After changing MCP configuration,
