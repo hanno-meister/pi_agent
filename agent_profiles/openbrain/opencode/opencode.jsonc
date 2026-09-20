@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "/pi_agent/agent_profiles/openbrain/opencode/node_modules/oh-my-opencode-slim/dist/index.js"
+  ],
+  "skills": {
+    "paths": [
+      "/pi_agent/agent_profiles/openbrain/.agents/skills"
+    ]
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@2.2.21/oh-my-opencode-slim.schema.json",
+  "preset": "openai",
+  "autoUpdate": false,
+  "multiplexer": {
+    "type": "tmux",
+    "layout": "main-vertical",
+    "main_pane_size": 60
+  },
+  "presets": {
+    "openai": {
+      "orchestrator": {
+        "model": "openai/gpt-5.6-terra",
+        "variant": "high",
+        "skills": [
+          "*"
+        ],
+        "mcps": []
+      },
+      "oracle": {
+        "model": "openai/gpt-5.6-sol",
+        "variant": "high",
+        "skills": [
+          "simplify"
+        ],
+        "mcps": []
+      },
+      "librarian": {
+        "model": "openai/gpt-5.6-luna",
+        "variant": "low",
+        "skills": [],
+        "mcps": [
+          "context7",
+          "gh_grep",
+          "tavily",
+          "deepwiki"
+        ]
+      },
+      "explorer": {
+        "model": "openai/gpt-5.6-luna",
+        "variant": "low",
+        "skills": [],
+        "mcps": []
+      },
+      "designer": {
+        "model": "openai/gpt-5.6-luna",
+        "variant": "medium",
+        "skills": [],
+        "mcps": []
+      },
+      "fixer": {
+        "model": "openai/gpt-5.6-luna",
+        "variant": "high",
+        "skills": [],
+        "mcps": []
+      }
+    },
+    "anthropic": {
+      "orchestrator": {
+        "model": "anthropic/claude-opus-5",
+        "variant": "high",
+        "skills": [
+          "*"
+        ],
+        "mcps": []
+      },
+      "oracle": {
+        "model": "anthropic/claude-opus-5",
+        "variant": "high",
+        "skills": [
+          "simplify"
+        ],
+        "mcps": []
+      },
+      "librarian": {
+        "model": "anthropic/claude-haiku-4-5",
+        "variant": "low",
+        "skills": [],
+        "mcps": [
+          "context7",
+          "gh_grep",
+          "tavily",
+          "deepwiki"
+        ]
+      },
+      "explorer": {
+        "model": "anthropic/claude-haiku-4-5",
+        "variant": "low",
+        "skills": [],
+        "mcps": []
+      },
+      "designer": {
+        "model": "anthropic/claude-haiku-4-5",
+        "variant": "medium",
+        "skills": [],
+        "mcps": []
+      },
+      "fixer": {
+        "model": "anthropic/claude-haiku-4-5",
+        "variant": "high",
+        "skills": [],
+        "mcps": []
+      }
+    },
+    "openrouter-free": {
+      "orchestrator": {
+        "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+        "variant": "high",
+        "temperature": 0.4,
+        "skills": [
+          "*"
+        ],
+        "mcps": []
+      },
+      "oracle": {
+        "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+        "variant": "max",
+        "temperature": 0.4,
+        "skills": [
+          "simplify"
+        ],
+        "mcps": []
+      },
+      "explorer": {
+        "model": "openrouter/poolside/laguna-s-2.1:free",
+        "temperature": 0.2,
+        "skills": [],
+        "mcps": []
+      },
+      "librarian": {
+        "model": "openrouter/poolside/laguna-s-2.1:free",
+        "temperature": 0.2,
+        "skills": [],
+        "mcps": [
+          "context7",
+          "gh_grep",
+          "tavily",
+          "deepwiki"
+        ]
+      },
+      "designer": {
+        "model": "openrouter/poolside/laguna-s-2.1:free",
+        "variant": "medium",
+        "temperature": 0.3,
+        "skills": [],
+        "mcps": []
+      },
+      "fixer": {
+        "model": "openrouter/poolside/laguna-s-2.1:free",
+        "variant": "high",
+        "temperature": 0.2,
+        "skills": [],
+        "mcps": []
+      },
+      "observer": {
+        "model": "openrouter/poolside/laguna-s-2.1:free",
+        "variant": "low",
+        "temperature": 0.2,
+        "skills": [],
+        "mcps": []
+      }
+    }
+  }
+}

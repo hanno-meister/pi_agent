@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+profile=/pi_agent/agent_profiles/openbrain
+config_dir="$profile/opencode"
+runtime="$profile/runtime"
+
+if [ ! -d "$config_dir" ]; then
+  printf 'openbrain profile is unavailable: %s\n' "$profile" >&2
+  exit 1
+fi
+
+# Keep all profile-owned state below this profile. The host `opencode` binary
+# remains the only global dependency.
+mkdir -p "$runtime/home" "$runtime/config" "$runtime/data" \
+  "$runtime/state" "$runtime/cache"
+export HOME="$runtime/home"
+export XDG_CONFIG_HOME="$runtime/config"
+export XDG_DATA_HOME="$runtime/data"
+export XDG_STATE_HOME="$runtime/state"
+export XDG_CACHE_HOME="$runtime/cache"
+export OPENCODE_DB="$runtime/state/opencode.db"
+export npm_config_cache="$runtime/cache/npm"
+export BUN_INSTALL_CACHE_DIR="$runtime/cache/bun"
+
+export OPENCODE_CONFIG_DIR="$config_dir"
+export OPENCODE_TUI_CONFIG="$config_dir/tui.jsonc"
+unset OPENCODE_CONFIG OPENCODE_CONFIG_CONTENT OPENCODE_DISABLE_PROJECT_CONFIG
+
+exec opencode "$@"
