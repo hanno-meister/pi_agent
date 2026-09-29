@@ -9,6 +9,10 @@ disable-model-invocation: true
 Make the pull request a durable record that lets reviewers and future readers
 understand what changed, why, and how it was verified.
 
+Treat pull-request preparation as packaging the existing change. Keep source
+files, tests, commits, and history unchanged. Code-review findings are
+report-only; surface them to the user rather than applying them.
+
 Follow repository instructions, PR templates, tooling, and conventions first.
 
 ## Establish the change
