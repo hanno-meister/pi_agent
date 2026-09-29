@@ -17,19 +17,6 @@
       }
     }
   },
-
-  "mcp": {
-    "langsmith": {
-      "type": "remote",
-      "url": "https://eu.api.smith.langchain.com/mcp",
-      "enabled": true,
-      "oauth": false,
-      "headers": {
-        "X-Api-Key": "{env:LANGSMITH_API_KEY}"
-      }
-    }
-  },
-
   "agent": {
     "build": {
       "disable": true

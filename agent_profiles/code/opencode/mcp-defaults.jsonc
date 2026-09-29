@@ -19,18 +19,22 @@
     // them; per-agent `mcps` lists keep them off every other agent.
     "docs-langchain": {
       "type": "remote",
-      "enabled": true,
+      "enabled": false,
       "url": "https://docs.langchain.com/mcp"
     },
     "reference-langchain": {
       "type": "remote",
-      "enabled": true,
+      "enabled": false,
       "url": "https://reference.langchain.com/mcp"
     },
     "langsmith": {
       "type": "remote",
       "url": "https://eu.api.smith.langchain.com/mcp",
-      "enabled": true
+      "enabled": false,
+      "oauth": false,
+      "headers": {
+        "X-Api-Key": "{env:LANGSMITH_API_KEY}"
+      }
     }
   }
 }
