@@ -1,8 +1,11 @@
 {
-  "$schema": "https://unpkg.com/oh-my-opencode-slim@2.2.17/oh-my-opencode-slim.schema.json",
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@3.0.1/oh-my-opencode-slim.schema.json",
   "preset": "openai",
   "autoUpdate": false,
-  "disabled_agents": ["observer", "langchain-expert"],
+  "disabled_agents": [
+    "observer",
+    "langchain-expert"
+  ],
   "multiplexer": {
     "type": "tmux",
     "layout": "main-vertical",
@@ -11,7 +14,7 @@
   "presets": {
     "openai": {
       "orchestrator": {
-        "model": "openai/gpt-6-sol",
+        "model": "openai/gpt-6.1-sol",
         "variant": "high",
         "skills": [
           "*",
@@ -39,12 +42,13 @@
           "!langsmith-online-eval-engineering",
           "!langsmith-trace",
           "!managed-deep-agents",
+          "!skill-creator",
           "!swarm"
         ],
         "mcps": []
       },
       "oracle": {
-        "model": "openai/gpt-6-astra",
+        "model": "openai/gpt-6.1-sol",
         "variant": "high",
         "skills": [
           "simplify"
@@ -82,7 +86,7 @@
       },
       "langchain-expert": {
         "model": "openai/gpt-6-luna",
-        "variant": "high",
+        "variant": "low",
         "mcps": [
           "docs-langchain",
           "reference-langchain",
@@ -92,7 +96,7 @@
     },
     "anthropic": {
       "orchestrator": {
-        "model": "anthropic/claude-opus-5",
+        "model": "anthropic/claude-opus-5.5",
         "variant": "high",
         "skills": [
           "*",
@@ -120,12 +124,13 @@
           "!langsmith-online-eval-engineering",
           "!langsmith-trace",
           "!managed-deep-agents",
+          "!skill-creator",
           "!swarm"
         ],
         "mcps": []
       },
       "oracle": {
-        "model": "anthropic/claude-opus-5",
+        "model": "anthropic/claude-opus-5.5",
         "variant": "high",
         "skills": [
           "simplify"
@@ -163,7 +168,7 @@
       },
       "langchain-expert": {
         "model": "anthropic/claude-haiku-4-5",
-        "variant": "high",
+        "variant": "low",
         "mcps": [
           "docs-langchain",
           "reference-langchain",
@@ -202,6 +207,7 @@
           "!langsmith-online-eval-engineering",
           "!langsmith-trace",
           "!managed-deep-agents",
+          "!skill-creator",
           "!swarm"
         ],
         "mcps": []
@@ -293,10 +299,8 @@
         "langsmith-online-eval-engineering",
         "langsmith-trace",
         "managed-deep-agents",
-        "swarm",
-        "diagnosing-bugs",
-        "verification-planning",
-        "tdd"
+        "skill-creator",
+        "swarm"
       ],
       "mcps": [
         "docs-langchain",
