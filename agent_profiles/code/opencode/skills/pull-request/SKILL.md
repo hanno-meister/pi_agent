@@ -44,16 +44,12 @@ the gap and ask; do not invoke verification planning automatically.
 Write a concise, imperative title following repository conventions. Without a
 repository convention, do not force a Conventional Commit prefix.
 
-The description must explain:
-
-- **What changed?** Summarize the meaningful behavior or structural change.
-- **Why?** Explain the problem, motivation, and important decisions.
-- **Verification:** State checks run, results, and relevant checks not run.
-- **Context:** Record limitations, trade-offs, dependencies, side effects, or
-  follow-up work.
-
-Use the repository template when one exists. Otherwise, use only the headings
-that help the reviewer; the concepts above matter more than fixed headings.
+Load and use the [pr skill](../pr/SKILL.md) to compose the body. Repository
+instructions and templates take precedence over its suggested format. Explain
+the motivation and important decisions, and include relevant limitations,
+trade-offs, dependencies, side effects, or follow-up work. Report verification
+honestly, including skipped checks and reasons as described in Review; use only
+available evidence and never fabricate before/after evidence.
 
 If a relevant originating issue is found, suggest its reference or closing
 syntax, but ask before adding it. If no issue is found, omit issue-reference
