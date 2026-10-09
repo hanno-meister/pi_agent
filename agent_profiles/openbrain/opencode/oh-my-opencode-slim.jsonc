@@ -10,7 +10,7 @@
   "presets": {
     "openai": {
       "orchestrator": {
-        "model": "openai/gpt-6-luna",
+        "model": "openai/gpt-6.1-sol",
         "variant": "high",
         "skills": [
           "*"
@@ -57,7 +57,7 @@
     },
     "anthropic": {
       "orchestrator": {
-        "model": "anthropic/claude-opus-5",
+        "model": "anthropic/claude-opus-5-5",
         "variant": "high",
         "skills": [
           "*"
@@ -65,7 +65,7 @@
         "mcps": []
       },
       "oracle": {
-        "model": "anthropic/claude-opus-5",
+        "model": "anthropic/claude-opus-5-5",
         "variant": "high",
         "skills": [
           "simplify"
@@ -73,7 +73,7 @@
         "mcps": []
       },
       "librarian": {
-        "model": "anthropic/claude-haiku-4-5",
+        "model": "anthropic/claude-haiku-5-5",
         "variant": "low",
         "skills": [],
         "mcps": [
@@ -84,19 +84,19 @@
         ]
       },
       "explorer": {
-        "model": "anthropic/claude-haiku-4-5",
+        "model": "anthropic/claude-haiku-5-5",
         "variant": "low",
         "skills": [],
         "mcps": []
       },
       "designer": {
-        "model": "anthropic/claude-haiku-4-5",
+        "model": "anthropic/claude-haiku-5-5",
         "variant": "medium",
         "skills": [],
         "mcps": []
       },
       "fixer": {
-        "model": "anthropic/claude-haiku-4-5",
+        "model": "anthropic/claude-haiku-5-5",
         "variant": "high",
         "skills": [],
         "mcps": []

@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/oh-my-opencode-slim@3.0.2/oh-my-opencode-slim.schema.json",
-  "preset": "openai",
+  "preset": "anthropic",
   "autoUpdate": false,
   "disabled_agents": [
     "observer",
