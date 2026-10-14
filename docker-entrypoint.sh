@@ -19,6 +19,10 @@ if [ -d "$code_skills" ]; then
     rm -rf "$graphify_stage"
     exit 1
   fi
+  if ! python3 /pi_agent/agent_profiles/code/narrow-graphify-skill.py "$code_skills/graphify/SKILL.md"; then
+    rm -rf "$graphify_stage"
+    exit 1
+  fi
   rm -rf "$graphify_stage"
 fi
 
