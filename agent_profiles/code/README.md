@@ -54,6 +54,18 @@ Interactive `code` launches choose a free high localhost port and pass matching
 `OPENCODE_PORT` or pass `--port` to override it. Non-interactive subcommands do
 not open a server port.
 
+## Ponytail
+
+Ponytail is loaded as the pinned `@dietrichgebert/ponytail@5.2.0` server plugin.
+It adds rules for the smallest complete change, with necessary tests and safety
+checks. The launcher defaults `PONYTAIL_DEFAULT_MODE` to `lite`; set it to
+`full`, `ultra`, or `off` to choose another fallback. In OpenCode, use `/ponytail lite`,
+`/ponytail full`, `/ponytail ultra`, or `/ponytail off` to change the active
+mode. Active mode is shared at
+`${XDG_CONFIG_HOME:-~/.config}/opencode/.ponytail-active` (it ignores
+`OPENCODE_CONFIG_DIR`); a saved mode takes precedence over the default. Restart
+OpenCode after changing the plugin configuration or default-mode environment.
+
 ## Profile layout
 
 ```text
@@ -70,7 +82,7 @@ opencode/
 └── oh-my-opencode-slim/          # profile-owned OMO prompt overrides
 ```
 
-OMO Slim itself is loaded as the pinned `oh-my-opencode-slim@2.2.17` npm plugin.
+OMO Slim itself is loaded as the pinned `oh-my-opencode-slim@3.0.2` npm plugin.
 Its built-in agents remain package-owned. OMO-managed bundled skills are synced
 into this profile's `skills/` directory; their runtime metadata and bundled
 directories are ignored by Git. The repository also tracks selected Matt Pocock
@@ -198,7 +210,7 @@ availability with `/models` before replacing the placeholders.
 
 - OpenCode, Pi, and Graphify: versions are pinned in `Dockerfile`; update them
   there and rebuild the image deliberately.
-- OMO Slim: version `2.2.17` is pinned in the profile config and automatic
+- OMO Slim: version `3.0.2` is pinned in the profile config and automatic
   updates are disabled; update the plugin and schema versions deliberately.
 - Tracked or manually installed skills: from this directory, update with
   `npx skills@latest update -p` when desired and review the resulting profile
