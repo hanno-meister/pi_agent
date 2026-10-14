@@ -15,8 +15,8 @@
       "enabled": false,
       "url": "https://mcp.deepwiki.com/mcp"
     },
-    // Enabled at the server level so @langchain-expert (and @librarian) can use
-    // them; per-agent `mcps` lists keep them off every other agent.
+    // Disabled by default; explicitly enable only when opting in to the
+    // LangChain expert's dedicated MCPs.
     "docs-langchain": {
       "type": "remote",
       "enabled": false,

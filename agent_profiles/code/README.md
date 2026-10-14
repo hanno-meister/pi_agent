@@ -28,10 +28,10 @@ skills, and instructions remain available.
 
 ## MCP configuration
 
-The profile-owned `opencode/mcp-defaults.jsonc` declares all four MCPs. Tavily
-is enabled by default; DeepWiki and the LangChain guides/reference MCPs are
-disabled by default. Set `TAVILY_API_KEY` outside tracked files; do not put the
-key in this profile or a repository configuration file.
+The profile-owned `opencode/mcp-defaults.jsonc` declares all five MCPs. Tavily
+is enabled by default; DeepWiki and the LangChain docs, reference, and LangSmith
+MCPs are disabled by default. Set `TAVILY_API_KEY` outside tracked files; do
+not put the key in this profile or a repository configuration file.
 
 Repositories can opt in to an MCP by overriding only its `enabled` property in
 their `opencode.jsonc` or `.opencode/` configuration. For example:
@@ -105,12 +105,16 @@ lives in `opencode/skills/link-second-brain/` and is available only through the
 ## LangChain expert agent
 
 A profile-owned, read-only, on-demand subagent `langchain-expert` specializes in
-LangChain, LangGraph, LangSmith, and Deep Agents. It investigates through
-repository inspection and its dedicated MCPs; it is not an implementation
-writer. The orchestrator routes ecosystem work to it, passes the repository
-root, files, error text, and any LangSmith trace ids because subagents run in an
-isolated context, and receives an implementation-ready, evidence-backed
-handoff for the orchestrator or fixer.
+LangChain, LangGraph, LangSmith, and Deep Agents. It is disabled by default in
+`opencode/oh-my-opencode-slim.jsonc`. To opt in, remove it from
+`disabled_agents`, and explicitly enable only the dedicated MCP servers needed
+by setting their `enabled` properties in `opencode/mcp-defaults.jsonc`. Restart
+OpenCode after changing either file. The agent investigates through repository
+inspection and its dedicated MCPs; it is not an implementation writer. The
+orchestrator routes ecosystem work to it, passes the repository root, files,
+error text, and any LangSmith trace ids because subagents run in an isolated
+context, and receives an implementation-ready, evidence-backed handoff for the
+orchestrator or fixer.
 
 It holds the 25 LangChain-ecosystem skills exclusively: every preset's
 `orchestrator.skills` array lists each of them with a `"!name"` deny, so the
@@ -136,16 +140,11 @@ implementation to the parent or `@fixer`, and UI work to `@designer`. Its
 structured handoff is conditional: it reports findings without forcing a root
 cause, and includes exact proposed changes only when warranted.
 
-It accesses three MCPs: `docs-langchain`, `reference-langchain`, and
-`langsmith`. The `langsmith` MCP uses EU LangSmith OAuth; no API key is
-configured or supplied by this profile. After changing MCP configuration,
-restart OpenCode, then authenticate interactively with:
-
-```sh
-opencode mcp auth langsmith
-```
-
-Complete the browser OAuth flow before using the LangSmith tools.
+When opted in, it accesses `docs-langchain`, `reference-langchain`, and
+`langsmith`. All three servers are disabled by default in the MCP configuration.
+The EU `langsmith` MCP uses `LANGSMITH_API_KEY` in its `X-Api-Key` header with
+`oauth: false`; it does not use an OAuth browser flow. Provide the key through
+the environment, never tracked files.
 
 ## Bundled skill attribution
 
@@ -158,8 +157,10 @@ License. Their source paths and content hashes are recorded in
 Twenty-five additional skills from
 [langchain-ai/langchain-skills](https://github.com/langchain-ai/langchain-skills)
 and [langchain-ai/langsmith-skills](https://github.com/langchain-ai/langsmith-skills)
-are installed and attributed in `LICENSES/langchain-ai-skills-NOTICE.txt`. These
-repositories do not declare a license at the repository level.
+are copied from their first ROOT-MIT-licensed revisions and attributed in
+`LICENSES/langchain-ai-skills-NOTICE.txt`. The complete upstream MIT text is in
+`LICENSES/langchain-ai-skills-MIT.txt`; source revisions, license URLs, scope,
+and dates are recorded in the notice.
 
 ## Add or update skills
 

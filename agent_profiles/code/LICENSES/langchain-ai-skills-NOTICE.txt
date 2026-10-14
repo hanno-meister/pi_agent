@@ -2,10 +2,12 @@ Attribution notice: LangChain and LangSmith agent skills
 =========================================================
 
 Twenty-five skills vendored into `agent_profiles/code/opencode/skills/` are
-copied from two upstream repositories published by LangChain (LangChain, Inc.):
+copied from two upstream repositories published by LangChain, Inc. at the
+immutable, ROOT-MIT-licensed revisions below. The repository-root licenses at
+these revisions cover the copied skill files.
 
   https://github.com/langchain-ai/langchain-skills
-    commit b7a2a8fc363d1711456f83d24230535c9fff93eb (2026-08-29)
+    commit e22f72f845926861bcabba62dfdd3bfb101de507 (2026-09-23)
     22 skills: deep-agents-core, deep-agents-memory,
     deep-agents-orchestration, deepagents-python-quickstart,
     deepagents-typescript-quickstart, ecosystem-primer, eval-engineering,
@@ -15,29 +17,21 @@ copied from two upstream repositories published by LangChain (LangChain, Inc.):
     langgraph-human-in-the-loop, langgraph-persistence,
     langgraph-python-quickstart, langgraph-typescript-quickstart,
     langsmith-online-eval-engineering, managed-deep-agents, swarm
+    MIT license: https://raw.githubusercontent.com/langchain-ai/langchain-skills/e22f72f845926861bcabba62dfdd3bfb101de507/LICENSE
 
   https://github.com/langchain-ai/langsmith-skills
-    commit 9e353767dfc4d465186417fb193f2f3ae6a609fa (2026-09-13)
+    commit f5def086f40d4e70c79a672855f06092531468d7 (2026-09-23)
     3 skills: langsmith-dataset, langsmith-evaluator, langsmith-trace
+    MIT license: https://raw.githubusercontent.com/langchain-ai/langsmith-skills/f5def086f40d4e70c79a672855f06092531468d7/LICENSE
 
-No license is declared upstream
--------------------------------
+Both upstream LICENSE files contain the same MIT License text and attribute
+copyright to LangChain, Inc. The complete, unchanged text is in
+`agent_profiles/code/LICENSES/langchain-ai-skills-MIT.txt`.
 
-As of 2026-09-14, neither repository contains a LICENSE file and the GitHub API
-reports no license for either one. These skills are therefore vendored here
-WITHOUT a grant of license from the copyright holder; copyright remains with
-LangChain, Inc. and its contributors.
+The selected revisions are the first revisions of these repositories with an
+MIT LICENSE file (2026-09-23). This attribution does not assert license coverage
+for previously vendored revisions. Source paths and computed folder hashes are
+recorded in `agent_profiles/code/skills-lock.json`.
 
-They are retained in this repository only as agent prompt material for the
-local `code` profile, attributed to their source. They are not redistributed as
-part of a product, not modified, and not relicensed. Exact source paths and
-content hashes for each skill are recorded in
-`agent_profiles/code/skills-lock.json`.
-
-If upstream later publishes a license, replace this notice with the license
-text and the usual attribution. If redistribution of this repository outside
-its current private use is ever intended, remove these skills or obtain
-permission first.
-
-Reinstall or update them with the commands in
-`agent_profiles/code/README.md` ("Add or update skills").
+Refresh the vendored skills only from revisions carrying the applicable
+upstream license; see `agent_profiles/code/README.md` for profile setup.

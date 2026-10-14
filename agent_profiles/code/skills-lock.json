@@ -71,7 +71,7 @@
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
       "skillPath": "config/skills/eval-engineering/SKILL.md",
-      "computedHash": "c0c88a41e1e1bb9bccc01dac78efa6e34538cbad3f6a60a1226fef8a611ebac3"
+      "computedHash": "5fa3cce584152705da2249dd7e2120834f7c5cf3ce1a926a5586bf328ead8da7"
     },
     "grill-me": {
       "source": "mattpocock/skills",
@@ -155,7 +155,7 @@
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
       "skillPath": "config/skills/langgraph-fundamentals/SKILL.md",
-      "computedHash": "790dd42d79190a6db6a7a82ac9b03fa371402a47d91ff88c1e2731b1ceff1d29"
+      "computedHash": "d1d8f8373ebb1ab3e1b2f29af152b1960eaf7f260dfc4823488514ebe88a8bae"
     },
     "langgraph-human-in-the-loop": {
       "source": "langchain-ai/langchain-skills",
@@ -185,31 +185,31 @@
       "source": "langchain-ai/langsmith-skills",
       "sourceType": "github",
       "skillPath": "config/skills/langsmith-dataset/SKILL.md",
-      "computedHash": "afa3bbf3a04e1a1449d079340beef5a6c2725c92261bc466555b45b5d24b9b0d"
+      "computedHash": "38c4ed7c09f14948243ace1b2e55c9baa356954ce1e17deace33745f443fa79b"
     },
     "langsmith-evaluator": {
       "source": "langchain-ai/langsmith-skills",
       "sourceType": "github",
       "skillPath": "config/skills/langsmith-evaluator/SKILL.md",
-      "computedHash": "1d923d0b3c34ced6b2b4ac7725ef929e01ef842d35d32a71f4c5f64a9d89f198"
+      "computedHash": "19c3706c96c069a20f3484742e5c6c013f2e8cc645c58fdcc89b9a79b8fe802f"
     },
     "langsmith-online-eval-engineering": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
       "skillPath": "config/skills/langsmith-online-eval-engineering/SKILL.md",
-      "computedHash": "8937a7bc6ee36c4ae02375f1f9c5d00dded7fe2c9f6e0926414e391e8dc40711"
+      "computedHash": "613c5745b02cc4d13abcf4f31ee6678231d3982c6fe7b65222912e893366a1b1"
     },
     "langsmith-trace": {
       "source": "langchain-ai/langsmith-skills",
       "sourceType": "github",
       "skillPath": "config/skills/langsmith-trace/SKILL.md",
-      "computedHash": "f8114f9cecb87978803adb2e07d280cb70876d89ea86d6f8b441f4bf28930bb4"
+      "computedHash": "b450dadea70507f0405c33b8171ee927b221f679e0e9f650d49176e512084cfa"
     },
     "managed-deep-agents": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
       "skillPath": "config/skills/managed-deep-agents/SKILL.md",
-      "computedHash": "37afd87c6895844a4ca2d14095730b128aa3510accf3bdc69863f618c31208a9"
+      "computedHash": "20734cdcb22c5bda57b8010f0394d230cda4c7ea23db1e3a42951a2f1c6a100d"
     },
     "prototype": {
       "source": "mattpocock/skills",
@@ -239,7 +239,7 @@
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
       "skillPath": "config/skills/swarm/SKILL.md",
-      "computedHash": "4091bd7cf88d408a0724d4cc2be2c0c0fdf6fbe4bd3e700c4cabed58900823bb"
+      "computedHash": "a765a37432753b377cb1ad77d3f275e9b6e926b105c77b39ecde952fda00ce53"
     },
     "tdd": {
       "source": "mattpocock/skills",
