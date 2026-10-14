@@ -1,4 +1,4 @@
-import { createVoiceExtension } from "/pi_agent/voice-input/extension.js";
+import { createVoiceExtension } from "./extension.js";
 
 const voiceExtension = createVoiceExtension();
 
