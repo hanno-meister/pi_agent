@@ -9,6 +9,5 @@ exec pi \
   --thinking high \
   --extension /usr/local/lib/node_modules/pi-mcp-adapter/index.ts \
   --mcp-config "$profile/mcp.json" \
-  --extension /pi_agent/voice-input/extension-loader.js \
   --skill "$profile/skills/.agents/skills" \
   "$@"

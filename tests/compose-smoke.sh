@@ -9,9 +9,7 @@ fi
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 tmp=$(mktemp -d)
 project="pi-agent-smoke-$RANDOM"
-# Port 0 asks Docker to allocate an ephemeral host port; the container still
-# listens on its configured port 4317.
-compose=(env VOICE_GATEWAY_PORT=0 docker compose --env-file /dev/null --project-directory "$tmp/checkout")
+compose=(docker compose --env-file /dev/null --project-directory "$tmp/checkout")
 cleanup() {
   "${compose[@]}" -p "$project" down --volumes --remove-orphans >/dev/null 2>&1 || true
   rm -rf "$tmp"
@@ -34,7 +32,7 @@ tar -C "$root" \
 env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
   "${compose[@]}" -p "$project" up --build --detach
 
-[ "$("${compose[@]}" -p "$project" ps --status running --services | sort)" = "$(printf 'pi\nvoice-gateway')" ]
+[ "$("${compose[@]}" -p "$project" ps --status running --services | sort)" = "pi" ]
 "${compose[@]}" -p "$project" exec -T pi bash -lc 'test -n "$BASH_VERSION"'
 "${compose[@]}" -p "$project" exec -T pi sh -c 'command -v ps >/dev/null'
 "${compose[@]}" -p "$project" exec -T pi test -L /root/.bashrc
@@ -103,10 +101,10 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   node -e '"'"'
     const { spawnSync } = require("node:child_process");
     const profiles = [
-      ["pimatt", ["voice", "voice-setup"]],
-      ["pibrain", ["voice", "voice-setup", "mcp", "mcp-auth"]],
+      ["pimatt", [], ["voice", "voice-setup"]],
+      ["pibrain", ["mcp", "mcp-auth"], ["voice", "voice-setup"]],
     ];
-    for (const [profile, expectedCommands] of profiles) {
+    for (const [profile, expectedCommands, absentCommands] of profiles) {
       const result = spawnSync(profile, ["--mode", "rpc"], {
         input: "{\"type\":\"get_commands\"}\n",
         encoding: "utf8",
@@ -123,15 +121,15 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
         !Array.isArray(commands) ||
         !expectedCommands.every((name) =>
           commands.some((command) => command.name === name),
+        ) ||
+        absentCommands.some((name) =>
+          commands.some((command) => command.name === name),
         )
       ) {
         process.exit(1);
       }
     }
   '"'"''
-"${compose[@]}" -p "$project" exec -T voice-gateway node -e \
-  "fetch('http://127.0.0.1:4317/health').then(async r => { const health = await r.json(); if (!r.ok || health.status !== 'unconfigured' || health.action !== 'Set OPENAI_API_KEY to enable transcription') process.exit(1) })"
-"${compose[@]}" -p "$project" port voice-gateway 4317 | grep -Ex '127\.0\.0\.1:[0-9]+'
 
 # pimatt explicitly adds its profile resources but leaves native skill discovery
 # enabled, allowing skills in the current project to compose with the profile.
@@ -147,8 +145,6 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   grep -Fqx -- "/pi_agent/agent_profiles/pimatt/skills/.agents/skills" /tmp/pimatt-smoke/args; \
   ! grep -Fqx -- "--prompt-template" /tmp/pimatt-smoke/args; \
   ! grep -Fqx -- "--no-extensions" /tmp/pimatt-smoke/args; \
-  grep -Fqx -- "--extension" /tmp/pimatt-smoke/args; \
-  grep -Fqx -- "/pi_agent/voice-input/extension-loader.js" /tmp/pimatt-smoke/args; \
   ! grep -Fqx -- "--no-skills" /tmp/pimatt-smoke/args'
 
 # pibrain loads the tracked second-brain skills while preserving native discovery.
@@ -165,6 +161,5 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
   grep -Fqx -- "/usr/local/lib/node_modules/pi-mcp-adapter/index.ts" /tmp/pibrain-smoke/args; \
   grep -Fqx -- "--mcp-config" /tmp/pibrain-smoke/args; \
   grep -Fqx -- "/pi_agent/agent_profiles/pibrain/mcp.json" /tmp/pibrain-smoke/args; \
-  grep -Fqx -- "/pi_agent/voice-input/extension-loader.js" /tmp/pibrain-smoke/args; \
   grep -Fq -- '"bearerTokenEnv": "TAVILY_API_KEY"' /pi_agent/agent_profiles/pibrain/mcp.json; \
   ! grep -Fqx -- "--no-skills" /tmp/pibrain-smoke/args'

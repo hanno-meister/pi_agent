@@ -29,7 +29,5 @@ printf '==> bash tests/openbrain-profile-smoke.sh\n'
 bash tests/openbrain-profile-smoke.sh
 printf '==> python3 tests/graphify-skill-smoke.py\n'
 python3 tests/graphify-skill-smoke.py
-printf '==> npm --prefix voice-input test\n'
-npm --prefix voice-input test
-printf '==> npm --prefix voice-input run typecheck\n'
-npm --prefix voice-input run typecheck
+printf '==> python3 tests/no-voice-integration-smoke.py\n'
+python3 tests/no-voice-integration-smoke.py

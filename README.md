@@ -2,7 +2,7 @@
 
 My personal, containerized workstation for software development, coding agents, and a durable second brain.
 
-I built this project because I want the same environment on every machine I use: clone the repository, start Docker, and continue working. It combines my terminal and editor configuration with agent profiles, persistent tool state, browser-backed voice dictation, and smoke-tested safety boundaries. Private repositories and knowledge remain in ignored workspaces that I manage explicitly.
+I built this project because I want the same environment on every machine I use: clone the repository, start Docker, and continue working. It combines my terminal and editor configuration with agent profiles, persistent tool state, and smoke-tested safety boundaries. Private repositories and knowledge remain in ignored workspaces that I manage explicitly.
 
 It is also an inspectable record of how I approach agentic engineering: I build workflows where agents use tools, retrieve durable context, verify their work, and ask for approval before changing important knowledge.
 
@@ -14,7 +14,6 @@ Good agentic work includes knowing when to build and when to adapt. This reposit
 | --- | --- | --- |
 | Docker environment and runtime workspaces | Reproduce the workstation while keeping private repositories and knowledge outside the public repository | Designed and developed by me |
 | Neovim, tmux, and shell configuration | Provide my portable terminal development workflow | Configured and maintained by me, using third-party tools and plugins |
-| Browser-backed voice dictation | Add session-isolated, draft-only voice input to Pi | Designed and developed by me |
 | [`pibrain`](agent_profiles/pibrain/) | Operate and learn from a private PARA second brain | Original second-brain workflows developed by me with agent assistance; selected utility skills retained from Matt Pocock with attribution |
 | [`pimatt`](agent_profiles/pimatt/) | Provide general software-engineering workflows | Primarily curated from [Matt Pocock's skills](https://github.com/mattpocock/skills), with local integration and explicit attribution |
 | [`code`](agent_profiles/code/) | Run OpenCode with oh-my-opencode-slim orchestration | Profile integration and local workflows are tracked here; selected Matt Pocock skills are bundled with attribution |
@@ -63,12 +62,8 @@ This is the kind of agentic work I am interested in: not a single clever prompt,
 flowchart LR
     H["Host: Linux, Raspberry Pi, macOS, or WSL"] --> DC["Docker Compose"]
     DC --> C["Persistent development container"]
-    DC --> G["Voice gateway"]
-    B["Chrome microphone"] -->|"loopback or SSH tunnel"| G
-    G -->|"session-scoped draft transcript"| C
 
     R["Public Git repository"] --> C
-    R --> G
     R --> D["Authored dotfiles"]
     R --> P["Tracked agent profiles"]
 
@@ -143,38 +138,7 @@ Copy the example environment file and set only what the current machine needs:
 cp .env.example .env
 ```
 
-Available settings include provider credentials and Git author identity. Every entry in `.env` is forwarded to the `pi` container, so a new credential needs no `compose.yaml` change; the `voice-gateway` service keeps its own narrow list. `.env` is ignored by Git, it is optional, and the container starts without provider credentials when it is absent.
-
-### Voice dictation
-
-Configure `OPENAI_API_KEY` in `.env`, then start Compose:
-
-```sh
-cp .env.example .env
-# edit .env: set OPENAI_API_KEY
-docker compose up --build --detach
-```
-
-The gateway binds only to the Docker host's loopback interface. If Chrome runs on that host, open `http://localhost:4317` directly. If Docker runs remotely, forward the port from the machine running Chrome:
-
-```sh
-ssh -L 4317:localhost:4317 your-development-host
-```
-
-Then open `http://localhost:4317`, grant Chrome microphone permission, and click **Enable microphone**. This only arms the recorder browser. Voice controls are available only in interactive Pi sessions started with the `pimatt` or `pibrain` profile launchers (not bare `pi`): `Alt+R` and `/voice` are the only recording controls; Pi inserts the transcript into the draft without submitting it. Use `/voice-setup` to select `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, or `whisper-1` for only that Pi session.
-
-New sessions default to `gpt-4o-mini-transcribe`, English, and a 120-second recording limit. `.env.example` documents `VOICE_GATEWAY_PORT`, `VOICE_TRANSCRIPTION_MODEL`, `VOICE_LANGUAGE`, `VOICE_MAX_DURATION_SECONDS`, and `OPENAI_API_KEY`. Set `VOICE_GATEWAY_PORT` if 4317 conflicts, and use that port in both the browser URL and SSH forwarding command. Invalid values fail before transcription.
-
-#### Voice troubleshooting
-
-| Problem | Fix |
-| --- | --- |
-| SSH tunnel fails | Confirm SSH access, rerun the forwarding command, and use the configured `VOICE_GATEWAY_PORT`. |
-| Port conflict | Set an unused `VOICE_GATEWAY_PORT` in `.env`, restart Compose, and forward that same port. |
-| Missing credentials | Set `OPENAI_API_KEY` in `.env` and restart `voice-gateway`; `/health` reports `unconfigured` with the required action while the environment remains usable. |
-| Chrome cannot record | Open the forwarded `localhost` page, grant microphone permission, then click **Enable microphone**. |
-| Recorder held by another browser | Close its voice page, or use the new page's explicit takeover control once no recording is active. |
-| Pi session is stale | Restart the Pi session; it re-registers automatically. Any transcript for the stale session is discarded. |
+Available settings include provider credentials and Git author identity. Every entry in `.env` is forwarded to the `pi` container, so a new credential needs no `compose.yaml` change. `.env` is ignored by Git, it is optional, and the container starts without provider credentials when it is absent.
 
 ## Portability and verification
 
@@ -185,13 +149,13 @@ I use this environment on:
 - macOS through Docker;
 - Windows through WSL.
 
-The Docker image explicitly supports `amd64` and `arm64`. Run the offline fast checks from any working directory with Bash, Python 3, Node.js, and npm installed:
+The Docker image explicitly supports `amd64` and `arm64`. Run the offline fast checks from any working directory with Bash and Python 3 installed:
 
 ```sh
 bash /path/to/pi_agent/tests/check-fast.sh
 ```
 
-This checks syntax for repo-owned launchers and smoke scripts, the Ponytail, OpenBrain, and Graphify skill smoke tests, and the voice-input unit/type checks. It does not install dependencies or require Docker or network access. GitHub Actions runs these checks on pushes and pull requests using Node.js 24; secret scanning remains separate.
+This checks syntax for repo-owned launchers and smoke scripts, the Ponytail, OpenBrain, Graphify, and no-voice integration smoke tests. It does not install dependencies or require Docker or network access. GitHub Actions runs these checks on pushes and pull requests; secret scanning remains separate.
 
 The Linux end-to-end Docker smoke test remains a separate local check:
 
@@ -199,12 +163,7 @@ The Linux end-to-end Docker smoke test remains a separate local check:
 tests/compose-smoke.sh
 ```
 
-It verifies startup without provider credentials, profile discovery, configuration symlinks, Pi/OpenCode availability, and voice-gateway integration. Voice behavior also has fast unit and syntax checks:
-
-```sh
-npm --prefix voice-input test
-npm --prefix voice-input run typecheck
-```
+It verifies startup without provider credentials, profile discovery, configuration symlinks, and Pi/OpenCode availability.
 
 ## License and attribution
 
