@@ -14,6 +14,7 @@ shell_sources=(
   tests/check-fast.sh
   tests/code-ponytail-smoke.sh
   tests/code-mini-tmux-smoke.sh
+  tests/openbrain-profile-smoke.sh
   tests/compose-smoke.sh
 )
 
@@ -24,6 +25,8 @@ done
 
 printf '==> bash tests/code-ponytail-smoke.sh\n'
 bash tests/code-ponytail-smoke.sh
+printf '==> bash tests/openbrain-profile-smoke.sh\n'
+bash tests/openbrain-profile-smoke.sh
 printf '==> python3 tests/graphify-skill-smoke.py\n'
 python3 tests/graphify-skill-smoke.py
 printf '==> npm --prefix voice-input test\n'

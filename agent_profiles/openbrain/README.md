@@ -15,17 +15,14 @@ Project configuration remains enabled. Rebuild the container after changing
 the Dockerfile or launcher, and restart OpenCode after changing profile config,
 models, or skills.
 
-The profile pins only `oh-my-opencode-slim@2.2.21`, disables OMO auto-update,
-and loads the plugin from the profile-local `opencode/node_modules/` paths.
-There are no MCP servers, presets, extra agents, or model overrides. Package
-manifests and the lockfile are tracked; after a clean checkout, install the
-profile dependency with:
-
-```sh
-cd /pi_agent/agent_profiles/openbrain/opencode
-npm ci --ignore-scripts
-```
+Both backend and TUI configs pin `oh-my-opencode-slim@2.2.21`. OpenCode resolves
+the plugin on first use, so network access is required then. Package-resolution
+caches remain isolated under the profile-owned `runtime/` paths above. The OMO
+config defines model presets and agent routing; the plugin can also add bundled
+MCP servers. Check the resolved configuration and your account's model access
+before using a preset.
 
 Retained skills under `.agents/skills/`, their lockfiles, and attribution
 metadata are unchanged and are exposed through the profile's `skills.paths`
-setting. Restart OpenCode after installing or changing profile dependencies.
+setting. Restart OpenCode after changing profile configuration, models, or
+skills.
