@@ -2,12 +2,22 @@
   "$schema": "https://opencode.ai/config.json",
 
   "plugin": [
-    "oh-my-opencode-slim@2.2.17"
+    "oh-my-opencode-slim@3.0.2",
+    "@dietrichgebert/ponytail@5.2.0"
   ],
 
   "default_agent": "orchestrator",
   "lsp": true,
 
+  // Keep the profile on the Compose-injected .env credential. This takes
+  // precedence over an older provider credential persisted by OpenCode.
+  "provider": {
+    "openai": {
+      "options": {
+        "apiKey": "{env:OPENAI_API_KEY}"
+      }
+    }
+  },
   "agent": {
     "build": {
       "disable": true

@@ -1,7 +1,11 @@
 {
-  "$schema": "https://unpkg.com/oh-my-opencode-slim@2.2.17/oh-my-opencode-slim.schema.json",
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@3.0.2/oh-my-opencode-slim.schema.json",
   "preset": "openai",
   "autoUpdate": false,
+  "disabled_agents": [
+    "observer",
+    "langchain-expert"
+  ],
   "multiplexer": {
     "type": "tmux",
     "layout": "main-vertical",
@@ -10,22 +14,41 @@
   "presets": {
     "openai": {
       "orchestrator": {
-        "model": "openai/gpt-5.6-terra",
+        "model": "openai/gpt-6.1-sol",
         "variant": "high",
         "skills": [
-          "*"
-        ],
-        "mcps": [
           "*",
-          "!context7",
-          "!tavily",
-          "!deepwiki",
-          "!docs-langchain",
-          "!reference-langchain"
-        ]
+          "!deep-agents-core",
+          "!deep-agents-memory",
+          "!deep-agents-orchestration",
+          "!deepagents-python-quickstart",
+          "!deepagents-typescript-quickstart",
+          "!ecosystem-primer",
+          "!eval-engineering",
+          "!langchain-dependencies",
+          "!langchain-fundamentals",
+          "!langchain-middleware",
+          "!langchain-python-quickstart",
+          "!langchain-rag",
+          "!langchain-typescript-quickstart",
+          "!langgraph-cli",
+          "!langgraph-fundamentals",
+          "!langgraph-human-in-the-loop",
+          "!langgraph-persistence",
+          "!langgraph-python-quickstart",
+          "!langgraph-typescript-quickstart",
+          "!langsmith-dataset",
+          "!langsmith-evaluator",
+          "!langsmith-online-eval-engineering",
+          "!langsmith-trace",
+          "!managed-deep-agents",
+          "!skill-creator",
+          "!swarm"
+        ],
+        "mcps": []
       },
       "oracle": {
-        "model": "openai/gpt-5.6-sol",
+        "model": "openai/gpt-6.1-sol",
         "variant": "high",
         "skills": [
           "simplify"
@@ -33,51 +56,81 @@
         "mcps": []
       },
       "librarian": {
-        "model": "openai/gpt-5.6-luna",
+        "model": "openai/gpt-6-luna",
         "variant": "low",
         "skills": [],
         "mcps": [
           "context7",
           "gh_grep",
           "tavily",
-          "deepwiki",
-          "docs-langchain",
-          "reference-langchain"
+          "deepwiki"
         ]
       },
       "explorer": {
-        "model": "openai/gpt-5.6-luna",
+        "model": "openai/gpt-6-luna",
         "variant": "low",
         "skills": [],
         "mcps": []
       },
       "designer": {
-        "model": "openai/gpt-5.6-luna",
+        "model": "openai/gpt-6-luna",
         "variant": "medium",
         "skills": [],
         "mcps": []
       },
       "fixer": {
-        "model": "openai/gpt-5.6-luna",
+        "model": "openai/gpt-6-luna",
         "variant": "high",
         "skills": [],
         "mcps": []
+      },
+      "langchain-expert": {
+        "model": "openai/gpt-6-luna",
+        "variant": "low",
+        "mcps": [
+          "docs-langchain",
+          "reference-langchain",
+          "langsmith"
+        ]
       }
     },
     "anthropic": {
       "orchestrator": {
-        "model": "anthropic/claude-opus-5",
+        "model": "anthropic/claude-opus-5-5",
         "variant": "high",
         "skills": [
-          "*"
-        ],
-        "mcps": [
           "*",
-          "!context7"
-        ]
+          "!deep-agents-core",
+          "!deep-agents-memory",
+          "!deep-agents-orchestration",
+          "!deepagents-python-quickstart",
+          "!deepagents-typescript-quickstart",
+          "!ecosystem-primer",
+          "!eval-engineering",
+          "!langchain-dependencies",
+          "!langchain-fundamentals",
+          "!langchain-middleware",
+          "!langchain-python-quickstart",
+          "!langchain-rag",
+          "!langchain-typescript-quickstart",
+          "!langgraph-cli",
+          "!langgraph-fundamentals",
+          "!langgraph-human-in-the-loop",
+          "!langgraph-persistence",
+          "!langgraph-python-quickstart",
+          "!langgraph-typescript-quickstart",
+          "!langsmith-dataset",
+          "!langsmith-evaluator",
+          "!langsmith-online-eval-engineering",
+          "!langsmith-trace",
+          "!managed-deep-agents",
+          "!skill-creator",
+          "!swarm"
+        ],
+        "mcps": []
       },
       "oracle": {
-        "model": "anthropic/claude-opus-5",
+        "model": "anthropic/claude-opus-5-5",
         "variant": "high",
         "skills": [
           "simplify"
@@ -85,35 +138,42 @@
         "mcps": []
       },
       "librarian": {
-        "model": "anthropic/claude-haiku-4-5",
+        "model": "anthropic/claude-haiku-5-5",
         "variant": "low",
         "skills": [],
         "mcps": [
           "context7",
           "gh_grep",
           "tavily",
-          "deepwiki",
-          "docs-langchain",
-          "reference-langchain"
+          "deepwiki"
         ]
       },
       "explorer": {
-        "model": "anthropic/claude-haiku-4-5",
+        "model": "anthropic/claude-haiku-5-5",
         "variant": "low",
         "skills": [],
         "mcps": []
       },
       "designer": {
-        "model": "anthropic/claude-haiku-4-5",
+        "model": "anthropic/claude-haiku-5-5",
         "variant": "medium",
         "skills": [],
         "mcps": []
       },
       "fixer": {
-        "model": "anthropic/claude-haiku-4-5",
+        "model": "anthropic/claude-haiku-5-5",
         "variant": "high",
         "skills": [],
         "mcps": []
+      },
+      "langchain-expert": {
+        "model": "anthropic/claude-haiku-5-5",
+        "variant": "low",
+        "mcps": [
+          "docs-langchain",
+          "reference-langchain",
+          "langsmith"
+        ]
       }
     },
     "openrouter-free": {
@@ -122,16 +182,35 @@
         "variant": "high",
         "temperature": 0.4,
         "skills": [
-          "*"
-        ],
-        "mcps": [
           "*",
-          "!context7",
-          "!tavily",
-          "!deepwiki",
-          "!docs-langchain",
-          "!reference-langchain"
-        ]
+          "!deep-agents-core",
+          "!deep-agents-memory",
+          "!deep-agents-orchestration",
+          "!deepagents-python-quickstart",
+          "!deepagents-typescript-quickstart",
+          "!ecosystem-primer",
+          "!eval-engineering",
+          "!langchain-dependencies",
+          "!langchain-fundamentals",
+          "!langchain-middleware",
+          "!langchain-python-quickstart",
+          "!langchain-rag",
+          "!langchain-typescript-quickstart",
+          "!langgraph-cli",
+          "!langgraph-fundamentals",
+          "!langgraph-human-in-the-loop",
+          "!langgraph-persistence",
+          "!langgraph-python-quickstart",
+          "!langgraph-typescript-quickstart",
+          "!langsmith-dataset",
+          "!langsmith-evaluator",
+          "!langsmith-online-eval-engineering",
+          "!langsmith-trace",
+          "!managed-deep-agents",
+          "!skill-creator",
+          "!swarm"
+        ],
+        "mcps": []
       },
       "oracle": {
         "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
@@ -156,9 +235,7 @@
           "context7",
           "gh_grep",
           "tavily",
-          "deepwiki",
-          "docs-langchain",
-          "reference-langchain"
+          "deepwiki"
         ]
       },
       "designer": {
@@ -181,7 +258,67 @@
         "temperature": 0.2,
         "skills": [],
         "mcps": []
+      },
+      "langchain-expert": {
+        "model": "openrouter/poolside/laguna-s-2.1:free",
+        "variant": "high",
+        "temperature": 0.2,
+        "mcps": [
+          "docs-langchain",
+          "reference-langchain",
+          "langsmith"
+        ]
       }
+    }
+  },
+  "agents": {
+    "langchain-expert": {
+      "description": "LangChain / LangGraph / LangSmith / Deep Agents specialist",
+      "skills": [
+        "deep-agents-core",
+        "deep-agents-memory",
+        "deep-agents-orchestration",
+        "deepagents-python-quickstart",
+        "deepagents-typescript-quickstart",
+        "ecosystem-primer",
+        "eval-engineering",
+        "langchain-dependencies",
+        "langchain-fundamentals",
+        "langchain-middleware",
+        "langchain-python-quickstart",
+        "langchain-rag",
+        "langchain-typescript-quickstart",
+        "langgraph-cli",
+        "langgraph-fundamentals",
+        "langgraph-human-in-the-loop",
+        "langgraph-persistence",
+        "langgraph-python-quickstart",
+        "langgraph-typescript-quickstart",
+        "langsmith-dataset",
+        "langsmith-evaluator",
+        "langsmith-online-eval-engineering",
+        "langsmith-trace",
+        "managed-deep-agents",
+        "skill-creator",
+        "swarm"
+      ],
+      "mcps": [
+        "docs-langchain",
+        "reference-langchain",
+        "langsmith"
+      ],
+      "permission": {
+        "read": "allow",
+        "grep": "allow",
+        "glob": "allow",
+        "list": "allow",
+        "lsp": "allow",
+        "edit": "deny",
+        "bash": "deny",
+        "webfetch": "deny",
+        "task": "deny"
+      },
+      "orchestratorPrompt": "@langchain-expert\n- Role: Read-only LangChain / LangGraph / LangSmith / Deep Agents diagnostic specialist, separate from @librarian. Use only local read, grep, glob, list, and lsp plus the docs-langchain, reference-langchain, and langsmith MCPs. No web browsing/webfetch, edits, shell, implementation, mutation, or delegation.\n- **Routing boundary:** generic/current-library research → @librarian; broad repository navigation → @explorer; ordinary implementation → parent/@fixer; UI → @designer. Hand back when scope or information is unavailable.\n- **Pass in the isolated handoff:** task, repo root, relevant paths, verbatim errors, observed vs desired behavior, LangSmith IDs, previous attempts, and package/runtime versions.\n- Before recommending validation, inspect scripts, CI, tests, manifests, and lockfiles read-only; give exact parent-run commands and expected signals, and never claim execution.\n- Return these headings in order: Status and scope; Findings or root cause; Likely affected paths; Exact proposed changes (only if warranted); Evidence and confidence; Applicable versions; Validation handoff; Blockers and remaining risks. Use Confirmed/Likely/Unverified, label unavailable evidence/inputs, and state findings without forcing a root cause."
     }
   }
 }

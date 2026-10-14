@@ -1,0 +1,37 @@
+Attribution notice: LangChain and LangSmith agent skills
+=========================================================
+
+Twenty-five skills vendored into `agent_profiles/code/opencode/skills/` are
+copied from two upstream repositories published by LangChain, Inc. at the
+immutable, ROOT-MIT-licensed revisions below. The repository-root licenses at
+these revisions cover the copied skill files.
+
+  https://github.com/langchain-ai/langchain-skills
+    commit e22f72f845926861bcabba62dfdd3bfb101de507 (2026-09-23)
+    22 skills: deep-agents-core, deep-agents-memory,
+    deep-agents-orchestration, deepagents-python-quickstart,
+    deepagents-typescript-quickstart, ecosystem-primer, eval-engineering,
+    langchain-dependencies, langchain-fundamentals, langchain-middleware,
+    langchain-python-quickstart, langchain-rag,
+    langchain-typescript-quickstart, langgraph-cli, langgraph-fundamentals,
+    langgraph-human-in-the-loop, langgraph-persistence,
+    langgraph-python-quickstart, langgraph-typescript-quickstart,
+    langsmith-online-eval-engineering, managed-deep-agents, swarm
+    MIT license: https://raw.githubusercontent.com/langchain-ai/langchain-skills/e22f72f845926861bcabba62dfdd3bfb101de507/LICENSE
+
+  https://github.com/langchain-ai/langsmith-skills
+    commit f5def086f40d4e70c79a672855f06092531468d7 (2026-09-23)
+    3 skills: langsmith-dataset, langsmith-evaluator, langsmith-trace
+    MIT license: https://raw.githubusercontent.com/langchain-ai/langsmith-skills/f5def086f40d4e70c79a672855f06092531468d7/LICENSE
+
+Both upstream LICENSE files contain the same MIT License text and attribute
+copyright to LangChain, Inc. The complete, unchanged text is in
+`agent_profiles/code/LICENSES/langchain-ai-skills-MIT.txt`.
+
+The selected revisions are the first revisions of these repositories with an
+MIT LICENSE file (2026-09-23). This attribution does not assert license coverage
+for previously vendored revisions. Source paths and computed folder hashes are
+recorded in `agent_profiles/code/skills-lock.json`.
+
+Refresh the vendored skills only from revisions carrying the applicable
+upstream license; see `agent_profiles/code/README.md` for profile setup.

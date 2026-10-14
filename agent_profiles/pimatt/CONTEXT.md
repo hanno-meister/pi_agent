@@ -18,7 +18,7 @@ A durable point-in-time note or decision retained because its evidence, rational
 
 ## Update proposal
 
-The exact set of second-brain paths and content-level operations that `/update-second-brain` presents for approval before changing the vault.
+The exact set of second-brain paths and content-level operations that an ordinary vault update presents for approval before changing the vault.
 
 ## Project decision
 

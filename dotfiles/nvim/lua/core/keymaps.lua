@@ -25,3 +25,7 @@ vim.keymap.set('n', '<leader>r', '<cmd>edit!<CR>', { desc = '[R]eload current fi
 vim.keymap.set('n', '<leader>td', function()
   vim.diagnostic.enable(not vim.diagnostic.is_enabled())
 end, { silent = true, noremap = true, desc = '[T]oggle [D]Diagnostics'})
+
+vim.keymap.set('x', '<leader>gb', function()
+  require('gitsigns').blame_line({ full = true })
+end, { desc = '[G]it [B]lame selected line' })

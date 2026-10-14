@@ -10,3 +10,12 @@ regexes = [
   '''OPENAI_API_KEY=''',
   '''TAVILY_API_KEY=''',
 ]
+
+[[rules]]
+id = "generic-api-key"
+    [[rules.allowlists]]
+    description = "Upstream tutorial placeholder captures a non-secret tracing setting."
+    condition = "AND"
+    regexTarget = "secret"
+    regexes = ['''^LANGSMITH_TRACING=true$''']
+    paths = ['''^agent_profiles/code/opencode/skills/ecosystem-primer/SKILL\.md$''']

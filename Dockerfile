@@ -55,7 +55,8 @@ RUN set -eux; \
 RUN npm install --global tree-sitter-cli@0.25.10 \
     && npm install --global --ignore-scripts \
         @earendil-works/pi-coding-agent@0.85.1 \
-    && npm install --global opencode-ai@1.18.29
+    && npm install --global opencode-ai@1.19.0 \
+    && npm install --global pi-mcp-adapter@2.32.1
 
 RUN UV_TOOL_BIN_DIR=/usr/local/bin uv tool install graphifyy==0.9.53 \
     && uv cache clean
@@ -64,7 +65,8 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY agent_profiles/pimatt/pimatt /usr/local/bin/pimatt
 COPY agent_profiles/pibrain/pibrain /usr/local/bin/pibrain
 COPY agent_profiles/code/code /usr/local/bin/code
-RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh /usr/local/bin/pimatt /usr/local/bin/pibrain /usr/local/bin/code
+COPY agent_profiles/openbrain/openbrain /usr/local/bin/openbrain
+RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh /usr/local/bin/pimatt /usr/local/bin/pibrain /usr/local/bin/code /usr/local/bin/openbrain
 
 WORKDIR /pi_agent/workspaces
 

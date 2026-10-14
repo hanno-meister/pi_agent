@@ -18,7 +18,9 @@ OMO Slim background subagents and Exa search, then forwards all arguments to
 
 Only configuration is profile-scoped. OpenCode's runtime, authentication,
 session, database, and cache state remain native/shared; this launcher does not
-create per-pane directories or copy auth and preference files.
+create per-pane directories or copy auth and preference files. OpenAI requests
+explicitly use the Compose-injected `OPENAI_API_KEY`, so an older OpenCode
+credential in `auth.json` cannot override `.env`.
 
 Project `opencode.json` and `.opencode/` configuration load before the profile
 directory. When settings conflict, profile configuration wins; project agents,
@@ -26,10 +28,10 @@ skills, and instructions remain available.
 
 ## MCP configuration
 
-The profile-owned `opencode/mcp-defaults.jsonc` declares all four MCPs. Tavily
-is enabled by default; DeepWiki and the LangChain guides/reference MCPs are
-disabled by default. Set `TAVILY_API_KEY` outside tracked files; do not put the
-key in this profile or a repository configuration file.
+The profile-owned `opencode/mcp-defaults.jsonc` declares all five MCPs. Tavily
+is enabled by default; DeepWiki and the LangChain docs, reference, and LangSmith
+MCPs are disabled by default. Set `TAVILY_API_KEY` outside tracked files; do
+not put the key in this profile or a repository configuration file.
 
 Repositories can opt in to an MCP by overriding only its `enabled` property in
 their `opencode.jsonc` or `.opencode/` configuration. For example:
@@ -52,6 +54,18 @@ Interactive `code` launches choose a free high localhost port and pass matching
 `OPENCODE_PORT` or pass `--port` to override it. Non-interactive subcommands do
 not open a server port.
 
+## Ponytail
+
+Ponytail is loaded as the pinned `@dietrichgebert/ponytail@5.2.0` server plugin.
+It adds rules for the smallest complete change, with necessary tests and safety
+checks. The launcher defaults `PONYTAIL_DEFAULT_MODE` to `lite`; set it to
+`full`, `ultra`, or `off` to choose another fallback. In OpenCode, use `/ponytail lite`,
+`/ponytail full`, `/ponytail ultra`, or `/ponytail off` to change the active
+mode. Active mode is shared at
+`${XDG_CONFIG_HOME:-~/.config}/opencode/.ponytail-active` (it ignores
+`OPENCODE_CONFIG_DIR`); a saved mode takes precedence over the default. Restart
+OpenCode after changing the plugin configuration or default-mode environment.
+
 ## Profile layout
 
 ```text
@@ -68,7 +82,7 @@ opencode/
 └── oh-my-opencode-slim/          # profile-owned OMO prompt overrides
 ```
 
-OMO Slim itself is loaded as the pinned `oh-my-opencode-slim@2.2.17` npm plugin.
+OMO Slim itself is loaded as the pinned `oh-my-opencode-slim@3.0.2` npm plugin.
 Its built-in agents remain package-owned. OMO-managed bundled skills are synced
 into this profile's `skills/` directory; their runtime metadata and bundled
 directories are ignored by Git. The repository also tracks selected Matt Pocock
@@ -81,6 +95,57 @@ pinned `graphifyy` package in `Dockerfile`. Container startup generates its
 OpenCode-specific skill in `opencode/skills/graphify/`; the directory is
 runtime-managed and ignored by Git. Use `/graphify .` in `code`.
 
+## Second-brain linking
+
+Use `/skill:link-second-brain [@project]` to record one related second-brain
+project in the current repository's root `AGENTS.md`. The user-invoked skill
+lives in `opencode/skills/link-second-brain/` and is available only through the
+`code` profile.
+
+## LangChain expert agent
+
+A profile-owned, read-only, on-demand subagent `langchain-expert` specializes in
+LangChain, LangGraph, LangSmith, and Deep Agents. It is disabled by default in
+`opencode/oh-my-opencode-slim.jsonc`. To opt in, remove it from
+`disabled_agents`, and explicitly enable only the dedicated MCP servers needed
+by setting their `enabled` properties in `opencode/mcp-defaults.jsonc`. Restart
+OpenCode after changing either file. The agent investigates through repository
+inspection and its dedicated MCPs; it is not an implementation writer. The
+orchestrator routes ecosystem work to it, passes the repository root, files,
+error text, and any LangSmith trace ids because subagents run in an isolated
+context, and receives an implementation-ready, evidence-backed handoff for the
+orchestrator or fixer.
+
+It holds the 25 LangChain-ecosystem skills exclusively: every preset's
+`orchestrator.skills` array lists each of them with a `"!name"` deny, so the
+orchestrator never loads them. OpenCode filters an agent's advertised skills by
+permission, so the denied skills cost the orchestrator no prompt tokens. Exact
+names are used instead of a `langchain-*` glob because wildcard matching in
+skill permission keys is unverified. The agent also gets `diagnosing-bugs`,
+`verification-planning`, and `tdd`.
+
+The agent's system prompt lives at
+`opencode/oh-my-opencode-slim/langchain-expert.md`; OMO Slim loads
+`oh-my-opencode-slim/<agent-name>.md` automatically, and the config's `prompt`
+key is deliberately unset because an inline prompt would override the file.
+Custom agents must be declared under the top-level `agents` key in
+`oh-my-opencode-slim.jsonc`, since OMO reads custom agent names only from there;
+its per-preset model lives in each `presets.<preset>.langchain-expert` block
+(top-level `agents` wins over the preset layer, so `model` is omitted there).
+
+Its local access is limited to `read`, `grep`, `glob`, `list`, and `lsp`; edit,
+bash, task, and webfetch are denied. Generic or current-library research routes
+to `@librarian`, broad repository navigation to `@explorer`, ordinary
+implementation to the parent or `@fixer`, and UI work to `@designer`. Its
+structured handoff is conditional: it reports findings without forcing a root
+cause, and includes exact proposed changes only when warranted.
+
+When opted in, it accesses `docs-langchain`, `reference-langchain`, and
+`langsmith`. All three servers are disabled by default in the MCP configuration.
+The EU `langsmith` MCP uses `LANGSMITH_API_KEY` in its `X-Api-Key` header with
+`oauth: false`; it does not use an OAuth browser flow. Provide the key through
+the environment, never tracked files.
+
 ## Bundled skill attribution
 
 Selected skills are copied from
@@ -88,6 +153,14 @@ Selected skills are copied from
 License. Their source paths and content hashes are recorded in
 `skills-lock.json`; the license text is in
 `LICENSES/mattpocock-skills-MIT.txt`.
+
+Twenty-five additional skills from
+[langchain-ai/langchain-skills](https://github.com/langchain-ai/langchain-skills)
+and [langchain-ai/langsmith-skills](https://github.com/langchain-ai/langsmith-skills)
+are copied from their first ROOT-MIT-licensed revisions and attributed in
+`LICENSES/langchain-ai-skills-NOTICE.txt`. The complete upstream MIT text is in
+`LICENSES/langchain-ai-skills-MIT.txt`; source revisions, license URLs, scope,
+and dates are recorded in the notice.
 
 ## Add or update skills
 
@@ -98,22 +171,32 @@ cd /pi_agent/agent_profiles/code
 npx skills@latest add mattpocock/skills -a opencode
 ```
 
+Install LangChain, LangGraph, and LangSmith skills (25 total) for the
+`langchain-expert` agent:
+
+```sh
+cd /pi_agent/agent_profiles/code
+npx skills@latest add langchain-ai/langchain-skills --skill '*' -a opencode
+npx skills@latest add langchain-ai/langsmith-skills --skill '*' -a opencode
+```
+
 This is a project-scoped skills-cli install, not a global install. The
 `.agents/skills` adapter routes selected files into `opencode/skills/`, where
 only the `code` profile discovers them. The installer updates
 `skills-lock.json` beside this README. Review skill and lock-file changes before
 committing them. `/root/.agents/skills` remains untouched.
 
-Then authenticate and refresh models:
+Refresh the provider model list:
 
 ```sh
-code auth login
 code models --refresh
 ```
 
-The OpenAI preset uses the model IDs published by OMO Slim. Check the model
-list and adjust `opencode/oh-my-opencode-slim.jsonc` if the authenticated
-provider exposes different IDs.
+OpenAI requests use `OPENAI_API_KEY` from the Compose environment (`.env`);
+`code auth login` is only needed when authenticating another provider. The
+OpenAI preset uses the model IDs published by OMO Slim. Check the model list
+and adjust `opencode/oh-my-opencode-slim.jsonc` if the provider exposes
+different IDs.
 
 ## Preset selection
 
@@ -128,7 +211,7 @@ availability with `/models` before replacing the placeholders.
 
 - OpenCode, Pi, and Graphify: versions are pinned in `Dockerfile`; update them
   there and rebuild the image deliberately.
-- OMO Slim: version `2.2.17` is pinned in the profile config and automatic
+- OMO Slim: version `3.0.2` is pinned in the profile config and automatic
   updates are disabled; update the plugin and schema versions deliberately.
 - Tracked or manually installed skills: from this directory, update with
   `npx skills@latest update -p` when desired and review the resulting profile
