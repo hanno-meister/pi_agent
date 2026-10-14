@@ -184,7 +184,15 @@ I use this environment on:
 - macOS through Docker;
 - Windows through WSL.
 
-The Docker image explicitly supports `amd64` and `arm64`. Run the Linux end-to-end smoke test locally:
+The Docker image explicitly supports `amd64` and `arm64`. Run the offline fast checks from any working directory with Bash, Python 3, Node.js, and npm installed:
+
+```sh
+bash /path/to/pi_agent/tests/check-fast.sh
+```
+
+This checks syntax for repo-owned launchers and smoke scripts, the Ponytail launcher and Graphify skill smoke tests, and the voice-input unit/type checks. It does not install dependencies or require Docker or network access. GitHub Actions runs these checks on pushes and pull requests using Node.js 24; secret scanning remains separate.
+
+The Linux end-to-end Docker smoke test remains a separate local check:
 
 ```sh
 tests/compose-smoke.sh
@@ -196,8 +204,6 @@ It verifies startup without provider credentials, profile discovery, configurati
 npm --prefix voice-input test
 npm --prefix voice-input run typecheck
 ```
-
-GitHub Actions currently runs secret scanning; the Compose smoke test remains a local check.
 
 ## License and attribution
 
