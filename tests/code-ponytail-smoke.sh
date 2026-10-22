@@ -18,10 +18,16 @@ deployment_path = "profile=/pi_agent/agent_profiles/code"
 assert launcher_source.count(deployment_path) == 1, "expected one deployment profile path in launcher"
 server_config = (root / "agent_profiles/code/opencode/opencode.jsonc").read_text()
 tui_config = (root / "agent_profiles/code/opencode/tui.jsonc").read_text()
+omo_config = (root / "agent_profiles/code/opencode/oh-my-opencode-slim.jsonc").read_text()
+dockerfile = (root / "Dockerfile").read_text()
+omo_version = "3.0.5"
 assert re.search(
-    r'"plugin"\s*:\s*\[\s*"oh-my-opencode-slim@3\.0\.2"\s*,\s*"@dietrichgebert/ponytail@5\.2\.0"\s*\]',
+    rf'"plugin"\s*:\s*\[\s*"oh-my-opencode-slim@{re.escape(omo_version)}"\s*,\s*"@dietrichgebert/ponytail@5\.2\.0"\s*\]',
     server_config,
 ), "server plugin list must retain OMO and pin Ponytail"
+assert f"oh-my-opencode-slim@{omo_version}" in tui_config, "TUI OMO version must match server plugin"
+assert f"oh-my-opencode-slim@{omo_version}/oh-my-opencode-slim.schema.json" in omo_config, "OMO schema version must match plugin"
+assert f"npm install --global oh-my-opencode-slim@{omo_version}" in dockerfile, "Docker OMO version must match profile"
 assert "ponytail" not in tui_config.lower(), "Ponytail must not be a TUI plugin"
 
 with tempfile.TemporaryDirectory(prefix="code-ponytail-smoke-") as temp:

@@ -56,6 +56,7 @@ RUN npm install --global tree-sitter-cli@0.25.10 \
     && npm install --global --ignore-scripts \
         @earendil-works/pi-coding-agent@0.85.1 \
     && npm install --global opencode-ai@1.19.0 \
+    && npm install --global oh-my-opencode-slim@3.0.5 \
     && npm install --global pi-mcp-adapter@2.32.1
 
 RUN UV_TOOL_BIN_DIR=/usr/local/bin uv tool install graphifyy==0.9.53 \
