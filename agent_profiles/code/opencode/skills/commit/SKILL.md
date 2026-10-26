@@ -41,17 +41,17 @@ Use Conventional Commit style with a type-only prefix:
 ```
 
 Treat 50 characters as the target for the complete subject, including its
-prefix. Use a lowercase type; capitalize the imperative description:
+prefix. Use a lowercase type; start the imperative description with lowercase:
 
 ```text
-fix: Handle empty input
+fix: handle empty input
 ```
 
 Apply these rules:
 
 - Separate subject from body with a blank line
 - Limit the subject line to 50 characters
-- Capitalize the description after the Conventional Commit prefix
+- Start the description after the Conventional Commit prefix with lowercase
 - Do not end the subject line with a period
 - Use the imperative mood in the subject line
 - Wrap the body at 72 characters

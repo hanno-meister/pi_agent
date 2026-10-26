@@ -1,7 +1,7 @@
 # Commit Message Example
 
 ```text
-feat: Add commit message guidance
+feat: add commit message guidance
 
 More detailed explanatory text, if necessary. Wrap it to about 72
 characters or so. In some contexts, the first line is treated as the
