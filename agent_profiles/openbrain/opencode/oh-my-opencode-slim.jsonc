@@ -49,8 +49,8 @@
         "mcps": []
       },
       "fixer": {
-        "model": "openai/gpt-6-luna",
-        "variant": "high",
+        "model": "openai/gpt-6.1-sol",
+        "variant": "low",
         "skills": [],
         "mcps": []
       }
