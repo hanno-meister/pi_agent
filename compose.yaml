@@ -17,6 +17,7 @@ services:
     volumes:
       - .:/pi_agent
       - pi-agent:/root/.pi/agent
+      - gh-config:/root/.config/gh
       - opencode-data:/root/.local/share/opencode
       - opencode-cache:/root/.cache/opencode
       - opencode-state:/root/.local/state/opencode
@@ -28,6 +29,7 @@ services:
 
 volumes:
   pi-agent:
+  gh-config:
   opencode-data:
   opencode-cache:
   opencode-state:

@@ -32,6 +32,11 @@ tar -C "$root" \
 env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
   "${compose[@]}" -p "$project" up --build --detach
 
+# Confirm the GitHub CLI config volume survives container recreation.
+"${compose[@]}" -p "$project" exec -T pi sh -c 'mkdir -p /root/.config/gh && printf "%s\n" smoke-marker > /root/.config/gh/persistence-smoke'
+"${compose[@]}" -p "$project" up --force-recreate --detach
+"${compose[@]}" -p "$project" exec -T pi sh -c 'test "$(cat /root/.config/gh/persistence-smoke)" = smoke-marker'
+
 [ "$("${compose[@]}" -p "$project" ps --status running --services | sort)" = "pi" ]
 "${compose[@]}" -p "$project" exec -T pi bash -lc 'test -n "$BASH_VERSION"'
 "${compose[@]}" -p "$project" exec -T pi sh -c 'command -v ps >/dev/null'

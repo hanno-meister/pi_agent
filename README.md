@@ -108,6 +108,30 @@ docker compose up --build --detach
 docker compose exec pi bash
 ```
 
+Authenticate GitHub CLI inside the container when needed:
+
+```sh
+gh auth login
+# For GitHub Enterprise, specify your host:
+gh auth login --hostname github.example.com
+```
+
+GitHub CLI configuration, including sensitive credentials, is stored in the dedicated `gh-config` Docker named volume. It persists across container recreation, but is not an encrypted vault; never commit its contents or a backup. `docker compose down --volumes` deletes this volume and its credentials.
+
+If upgrading an already-authenticated container, its existing login is not migrated automatically. Before recreating it, either back up the config and restore it after startup, or simply run `gh auth login` again in the new container. To preserve the existing login, run from the repository root before recreation:
+
+```sh
+umask 077
+backup=$(mktemp -d "${TMPDIR:-/tmp}/pi-agent-gh.XXXXXX")
+docker cp "$(docker compose ps -q pi):/root/.config/gh/." "$backup/"
+docker compose up --build --detach
+docker cp "$backup/." "$(docker compose ps -q pi):/root/.config/gh/"
+docker compose exec pi gh auth status
+rm -rf "$backup"
+```
+
+The backup contains credentials; keep it outside the checkout, never commit it, and remove it after confirming authentication works.
+
 The checkout is mounted at `/pi_agent`. Start the appropriate profile inside the container:
 
 ```sh
