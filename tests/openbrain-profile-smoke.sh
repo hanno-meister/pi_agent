@@ -6,7 +6,7 @@ repo_root=$(cd -- "$script_dir/.." && pwd -P)
 profile="$repo_root/agent_profiles/openbrain"
 config_dir="$profile/opencode"
 source_launcher="$profile/openbrain"
-expected_plugin='"oh-my-opencode-slim@2.2.21"'
+expected_plugin='"oh-my-opencode-slim@3.0.6"'
 
 for config in "$config_dir/opencode.jsonc" "$config_dir/tui.jsonc"; do
   plugin_count=$(grep -Ec '"oh-my-opencode-slim@[^\"]+"' "$config" || true)

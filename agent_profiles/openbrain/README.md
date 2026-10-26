@@ -15,7 +15,8 @@ Project configuration remains enabled. Rebuild the container after changing
 the Dockerfile or launcher, and restart OpenCode after changing profile config,
 models, or skills.
 
-Both backend and TUI configs pin `oh-my-opencode-slim@2.2.21`. OpenCode resolves
+Both backend and TUI configs pin `oh-my-opencode-slim@3.0.6`, matching the code
+profile and the OMO schema version. OpenCode resolves
 the plugin on first use, so network access is required then. Package-resolution
 caches remain isolated under the profile-owned `runtime/` paths above. The OMO
 config defines model presets and agent routing; the plugin can also add bundled
