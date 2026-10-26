@@ -82,7 +82,7 @@ opencode/
 └── oh-my-opencode-slim/          # profile-owned OMO prompt overrides
 ```
 
-OMO Slim itself is loaded as the pinned `oh-my-opencode-slim@3.0.5` npm plugin.
+OMO Slim itself is loaded as the pinned `oh-my-opencode-slim@3.0.6` npm plugin.
 Its built-in agents remain package-owned. OMO-managed bundled skills are synced
 into this profile's `skills/` directory; their runtime metadata and bundled
 directories are ignored by Git. The repository also tracks selected Matt Pocock
@@ -211,7 +211,7 @@ availability with `/models` before replacing the placeholders.
 
 - OpenCode, Pi, and Graphify: versions are pinned in `Dockerfile`; update them
   there and rebuild the image deliberately.
-- OMO Slim: `3.0.5` is pinned in the image and profile config; automatic updates
+- OMO Slim: `3.0.6` is pinned in the image and profile config; automatic updates
   are disabled. Keep upgrade pins aligned across `Dockerfile` (global CLI),
   `opencode/opencode.jsonc` (server plugin), `opencode/tui.jsonc` (TUI plugin),
   `opencode/oh-my-opencode-slim.jsonc` (schema URL), this README, and

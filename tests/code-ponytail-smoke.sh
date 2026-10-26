@@ -20,7 +20,7 @@ server_config = (root / "agent_profiles/code/opencode/opencode.jsonc").read_text
 tui_config = (root / "agent_profiles/code/opencode/tui.jsonc").read_text()
 omo_config = (root / "agent_profiles/code/opencode/oh-my-opencode-slim.jsonc").read_text()
 dockerfile = (root / "Dockerfile").read_text()
-omo_version = "3.0.5"
+omo_version = "3.0.6"
 assert re.search(
     rf'"plugin"\s*:\s*\[\s*"oh-my-opencode-slim@{re.escape(omo_version)}"\s*,\s*"@dietrichgebert/ponytail@5\.2\.0"\s*\]',
     server_config,
