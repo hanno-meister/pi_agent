@@ -9,12 +9,14 @@ shell_sources=(
   docker-entrypoint.sh
   agent_profiles/code/code
   agent_profiles/openbrain/openbrain
+  agent_profiles/ecc/ecc
   agent_profiles/pibrain/pibrain
   agent_profiles/pimatt/pimatt
   tests/check-fast.sh
   tests/code-profile-smoke.sh
   tests/code-mini-tmux-smoke.sh
   tests/openbrain-profile-smoke.sh
+  tests/ecc-profile-smoke.sh
   tests/compose-smoke.sh
 )
 
@@ -27,6 +29,8 @@ printf '==> bash tests/code-profile-smoke.sh\n'
 bash tests/code-profile-smoke.sh
 printf '==> bash tests/openbrain-profile-smoke.sh\n'
 bash tests/openbrain-profile-smoke.sh
+printf '==> bash tests/ecc-profile-smoke.sh\n'
+bash tests/ecc-profile-smoke.sh
 printf '==> python3 tests/graphify-skill-smoke.py\n'
 python3 tests/graphify-skill-smoke.py
 printf '==> python3 tests/no-voice-integration-smoke.py\n'

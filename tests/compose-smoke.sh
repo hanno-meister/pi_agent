@@ -51,6 +51,7 @@ env -u ANTHROPIC_API_KEY -u OPENAI_API_KEY -u TAVILY_API_KEY -u GIT_AUTHOR_NAME 
 "${compose[@]}" -p "$project" exec -T pi sh -c '! git config --global --get user.name && ! git config --global --get user.email'
 "${compose[@]}" -p "$project" exec -T pi pi --version
 "${compose[@]}" -p "$project" exec -T pi opencode --version
+"${compose[@]}" -p "$project" exec -T pi test -x /usr/local/bin/ecc
 "${compose[@]}" -p "$project" exec -T pi pi-mcp-adapter --help >/dev/null
 
 # code scopes OpenCode configuration without changing the test shell's XDG or

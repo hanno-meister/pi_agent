@@ -1,0 +1,8 @@
+/runtime/
+node_modules/
+/opencode/package-lock.json
+/opencode/bun.lock
+/opencode/bun.lockb
+/opencode/.opencode/
+__pycache__/
+*.pyc
