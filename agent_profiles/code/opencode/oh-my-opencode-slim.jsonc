@@ -2,6 +2,7 @@
   "$schema": "https://unpkg.com/oh-my-opencode-slim@3.0.6/oh-my-opencode-slim.schema.json",
   "preset": "openai",
   "autoUpdate": false,
+  "disabled_commands": ["implement"],
   "disabled_agents": [
     "observer",
     "langchain-expert"
@@ -14,7 +15,7 @@
   "presets": {
     "openai": {
       "orchestrator": {
-        "model": "openai/gpt-6.1-sol",
+        "model": "openai/gpt-6-sol-fast",
         "variant": "high",
         "skills": [
           "*",
@@ -45,10 +46,13 @@
           "!skill-creator",
           "!swarm"
         ],
-        "mcps": []
+        "mcps": [
+          "*",
+          "!context7",
+        ]
       },
       "oracle": {
-        "model": "openai/gpt-6.1-sol",
+        "model": "openai/gpt-6-sol-fast",
         "variant": "high",
         "skills": [
           "simplify"
