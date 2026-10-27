@@ -1,0 +1,15 @@
+Karpathy guidelines
+
+Source: https://github.com/multica-ai/andrej-karpathy-skills
+Revision: 2c606141936f1eeef17fa3043a72095b4765b9c2
+Upstream path: skills/karpathy-guidelines/SKILL.md
+Source URL: https://github.com/multica-ai/andrej-karpathy-skills/blob/2c606141936f1eeef17fa3043a72095b4765b9c2/skills/karpathy-guidelines/SKILL.md
+Local path: opencode/skills/karpathy-guidelines/SKILL.md
+
+The skill is copied without modifications. Its upstream frontmatter declares
+license: MIT; the upstream README and Claude plugin metadata also declare MIT.
+That revision contains no standalone LICENSE file. This notice records those
+declarations without inventing an upstream copyright or license text.
+
+The guidelines are inspired by Andrej Karpathy's observations, linked in the
+skill. This is third-party guidance, not an official Karpathy release.

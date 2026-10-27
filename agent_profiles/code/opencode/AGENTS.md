@@ -7,6 +7,9 @@ Project-local instructions are authoritative for project-specific commands,
 architecture, safety constraints, and verification. Load profile and project
 skills only when their descriptions match the task.
 
+For coding tasks, load and follow the `karpathy-guidelines` skill at
+`/pi_agent/agent_profiles/code/opencode/skills/karpathy-guidelines/SKILL.md`.
+
 Keep normal approval gates enabled. Treat model availability, generated OMO
 skills, and external MCP results as runtime assumptions to verify rather than
 facts to invent.

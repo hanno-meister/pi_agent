@@ -18,7 +18,6 @@ unset OPENCODE_TUI_CONFIG OPENCODE_DISABLE_PROJECT_CONFIG
 # OMO Slim's background scheduler and web search are profile-only settings.
 export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
 export OPENCODE_ENABLE_EXA=1
-export PONYTAIL_DEFAULT_MODE="${PONYTAIL_DEFAULT_MODE:-lite}"
 
 is_tui=true
 case "${1-}" in

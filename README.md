@@ -179,7 +179,7 @@ The Docker image explicitly supports `amd64` and `arm64`. Run the offline fast c
 bash /path/to/pi_agent/tests/check-fast.sh
 ```
 
-This checks syntax for repo-owned launchers and smoke scripts, the Ponytail, OpenBrain, Graphify, and no-voice integration smoke tests. It does not install dependencies or require Docker or network access. GitHub Actions runs these checks on pushes and pull requests; secret scanning remains separate.
+This checks syntax for repo-owned launchers and smoke scripts, the code profile, OpenBrain, Graphify, and no-voice integration smoke tests. It does not install dependencies or require Docker or network access. GitHub Actions runs these checks on pushes and pull requests; secret scanning remains separate.
 
 The Linux end-to-end Docker smoke test remains a separate local check:
 
@@ -196,5 +196,7 @@ My original work in this repository is available under the [MIT License](LICENSE
 The skills copied from [`mattpocock/skills`](https://github.com/mattpocock/skills) for `pibrain`, `pimatt`, and `code` retain their MIT license and provenance records under the applicable profile's `LICENSES/` or `skills/LICENSES/` directory and `skills-lock.json` file.
 
 The LangChain and LangSmith skills bundled with `code` are copied from MIT-licensed upstream revisions. Their license text and pinned source revisions are recorded in `agent_profiles/code/LICENSES/`.
+
+The Karpathy guidelines bundled with `code` retain their upstream MIT declaration. Their pinned source and attribution are recorded in `agent_profiles/code/LICENSES/andrej-karpathy-skills-NOTICE.txt`.
 
 The Caveman skill/content © 2026 Julius Brussee is licensed under the MIT License. Its notice and provenance record are under `agent_profiles/code/LICENSES/` and `agent_profiles/code/opencode/skills-lock.json`.

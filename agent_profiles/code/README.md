@@ -54,17 +54,14 @@ Interactive `code` launches choose a free high localhost port and pass matching
 `OPENCODE_PORT` or pass `--port` to override it. Non-interactive subcommands do
 not open a server port.
 
-## Ponytail
+## Karpathy guidelines
 
-Ponytail is loaded as the pinned `@dietrichgebert/ponytail@5.2.0` server plugin.
-It adds rules for the smallest complete change, with necessary tests and safety
-checks. The launcher defaults `PONYTAIL_DEFAULT_MODE` to `lite`; set it to
-`full`, `ultra`, or `off` to choose another fallback. In OpenCode, use `/ponytail lite`,
-`/ponytail full`, `/ponytail ultra`, or `/ponytail off` to change the active
-mode. Active mode is shared at
-`${XDG_CONFIG_HOME:-~/.config}/opencode/.ponytail-active` (it ignores
-`OPENCODE_CONFIG_DIR`); a saved mode takes precedence over the default. Restart
-OpenCode after changing the plugin configuration or default-mode environment.
+The profile uses the plain Markdown `karpathy-guidelines` skill for coding,
+review, and refactoring. Profile `opencode/AGENTS.md` requires loading it for
+coding tasks: surface assumptions, prefer simple solutions, make surgical
+changes, and define verifiable success criteria. It needs no plugin, mode
+switches, or persistent state. Restart OpenCode after changing profile
+instructions or skills.
 
 ## Profile layout
 
@@ -162,6 +159,11 @@ are copied from their first ROOT-MIT-licensed revisions and attributed in
 `LICENSES/langchain-ai-skills-MIT.txt`; source revisions, license URLs, scope,
 and dates are recorded in the notice.
 
+The unmodified `karpathy-guidelines` skill comes from
+[multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills).
+Its pinned source and upstream MIT declaration are recorded in
+`LICENSES/andrej-karpathy-skills-NOTICE.txt` and `skills-lock.json`.
+
 ## Add or update skills
 
 Choose additional Matt Pocock skills interactively:
@@ -215,7 +217,7 @@ availability with `/models` before replacing the placeholders.
   are disabled. Keep upgrade pins aligned across `Dockerfile` (global CLI),
   `opencode/opencode.jsonc` (server plugin), `opencode/tui.jsonc` (TUI plugin),
   `opencode/oh-my-opencode-slim.jsonc` (schema URL), this README, and
-  `tests/code-ponytail-smoke.sh` (expected version). The global CLI install and
+  `tests/code-profile-smoke.sh` (expected version). The global CLI install and
   OpenCode runtime plugin cache are distinct. Run `bash tests/check-fast.sh`;
   upgrades apply on the next OpenCode run (restart for immediate activation).
   Build Docker only when explicitly requested or investigating an installation

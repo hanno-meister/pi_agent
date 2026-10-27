@@ -12,7 +12,7 @@ shell_sources=(
   agent_profiles/pibrain/pibrain
   agent_profiles/pimatt/pimatt
   tests/check-fast.sh
-  tests/code-ponytail-smoke.sh
+  tests/code-profile-smoke.sh
   tests/code-mini-tmux-smoke.sh
   tests/openbrain-profile-smoke.sh
   tests/compose-smoke.sh
@@ -23,8 +23,8 @@ for source in "${shell_sources[@]}"; do
   bash -n "$source"
 done
 
-printf '==> bash tests/code-ponytail-smoke.sh\n'
-bash tests/code-ponytail-smoke.sh
+printf '==> bash tests/code-profile-smoke.sh\n'
+bash tests/code-profile-smoke.sh
 printf '==> bash tests/openbrain-profile-smoke.sh\n'
 bash tests/openbrain-profile-smoke.sh
 printf '==> python3 tests/graphify-skill-smoke.py\n'
