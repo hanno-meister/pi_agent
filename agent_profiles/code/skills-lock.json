@@ -1,6 +1,27 @@
 {
   "version": 1,
   "skills": {
+    "agent-architecture-audit": {
+      "source": "affaan-m/ecc",
+      "ref": "25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b",
+      "sourceType": "github",
+      "skillPath": "skills/agent-architecture-audit/SKILL.md",
+      "computedHash": "8db8e5f849a924a58080345423ad6ed5f383a3bbd7b6f8ba842cf2dc917ebda2"
+    },
+    "agent-harness-construction": {
+      "source": "affaan-m/ecc",
+      "ref": "25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b",
+      "sourceType": "github",
+      "skillPath": "skills/agent-harness-construction/SKILL.md",
+      "computedHash": "e034f38aa212f6eedb43382ce1c22c4af4fa3fc0545faa4fe09a3754a4c5a3df"
+    },
+    "agent-introspection-debugging": {
+      "source": "affaan-m/ecc",
+      "ref": "25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b",
+      "sourceType": "github",
+      "skillPath": "skills/agent-introspection-debugging/SKILL.md",
+      "computedHash": "a362c8480d33f227f25a156969ecc2106287d242126f15246a4b13f1c4288bac"
+    },
     "ask-matt": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -18,6 +39,13 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/codebase-design/SKILL.md",
       "computedHash": "b2888e4f4e8c0af3bfd557575a64b905c44e6248c3101d72077816882b3a92b9"
+    },
+    "contract-first": {
+      "source": "affaan-m/ecc",
+      "ref": "25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b",
+      "sourceType": "github",
+      "skillPath": "skills/contract-first/SKILL.md",
+      "computedHash": "623f9f532257b79f6500915b54abc332b2fd19f5ae3a0da843ce39006acb6602"
     },
     "deep-agents-core": {
       "source": "langchain-ai/langchain-skills",
@@ -67,11 +95,25 @@
       "skillPath": "config/skills/ecosystem-primer/SKILL.md",
       "computedHash": "cdcbe9115ec444518fc963fa1a5425aacad984f2b03c5e56980e4f9ad3888bc1"
     },
+    "enterprise-agent-ops": {
+      "source": "affaan-m/ecc",
+      "ref": "25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b",
+      "sourceType": "github",
+      "skillPath": "skills/enterprise-agent-ops/SKILL.md",
+      "computedHash": "1e82683be1437353dbcaf74fd9d5e0103e20166f07df22e1b11c42c68ad9ca5a"
+    },
     "eval-engineering": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
       "skillPath": "config/skills/eval-engineering/SKILL.md",
       "computedHash": "5fa3cce584152705da2249dd7e2120834f7c5cf3ce1a926a5586bf328ead8da7"
+    },
+    "fastapi-patterns": {
+      "source": "affaan-m/ecc",
+      "ref": "25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b",
+      "sourceType": "github",
+      "skillPath": "skills/fastapi-patterns/SKILL.md",
+      "computedHash": "3bcf24f9653a4ba0ee23e7e102383633374d137c5f3847c65394bfa95f2e4c99"
     },
     "grill-me": {
       "source": "mattpocock/skills",
