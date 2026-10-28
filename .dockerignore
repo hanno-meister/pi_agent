@@ -7,8 +7,8 @@
 !agent_profiles/
 !agent_profiles/code/
 !agent_profiles/code/code
-!agent_profiles/ecc/
-!agent_profiles/ecc/ecc
+!agent_profiles/openbrain/
+!agent_profiles/openbrain/openbrain
 !agent_profiles/pibrain/
 !agent_profiles/pibrain/pibrain
 !agent_profiles/pimatt/

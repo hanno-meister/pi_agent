@@ -67,8 +67,7 @@ COPY agent_profiles/pimatt/pimatt /usr/local/bin/pimatt
 COPY agent_profiles/pibrain/pibrain /usr/local/bin/pibrain
 COPY agent_profiles/code/code /usr/local/bin/code
 COPY agent_profiles/openbrain/openbrain /usr/local/bin/openbrain
-COPY agent_profiles/ecc/ecc /usr/local/bin/ecc
-RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh /usr/local/bin/pimatt /usr/local/bin/pibrain /usr/local/bin/code /usr/local/bin/openbrain /usr/local/bin/ecc
+RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh /usr/local/bin/pimatt /usr/local/bin/pibrain /usr/local/bin/code /usr/local/bin/openbrain
 
 WORKDIR /pi_agent/workspaces
 

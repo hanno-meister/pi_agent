@@ -17,7 +17,6 @@ Good agentic work includes knowing when to build and when to adapt. This reposit
 | [`pibrain`](agent_profiles/pibrain/) | Operate and learn from a private PARA second brain | Original second-brain workflows developed by me with agent assistance; selected utility skills retained from Matt Pocock with attribution |
 | [`pimatt`](agent_profiles/pimatt/) | Provide general software-engineering workflows | Primarily curated from [Matt Pocock's skills](https://github.com/mattpocock/skills), with local integration and explicit attribution |
 | [`code`](agent_profiles/code/) | Run OpenCode with oh-my-opencode-slim orchestration | Profile integration and local workflows are tracked here; selected Matt Pocock skills are bundled with attribution |
-| [`ecc`](agent_profiles/ecc/) | Run OpenCode with Everything Claude Code's native OpenCode catalog and plugin | Isolated profile integration with pinned upstream assets and attribution |
 | [`openbrain`](agent_profiles/openbrain/) | Run OpenCode for second-brain work with isolated profile state | Profile integration and curated workflows are tracked here with upstream attribution |
 
 Skills copied into `pibrain`, `pimatt`, and `code` retain their upstream license, source path, and content hash under the applicable profile.
@@ -144,9 +143,6 @@ pimatt
 cd /pi_agent/workspaces/projects/<repository>
 code
 
-# OpenCode with ECC (separate configuration, credentials, and state)
-ecc
-
 # Second-brain session
 cd /pi_agent/workspaces/second_brain
 pibrain
@@ -183,7 +179,7 @@ The Docker image explicitly supports `amd64` and `arm64`. Run the offline fast c
 bash /path/to/pi_agent/tests/check-fast.sh
 ```
 
-This checks syntax for repo-owned launchers and smoke scripts, the code profile, ECC, OpenBrain, Graphify, and no-voice integration smoke tests. It does not install dependencies or require Docker or network access. GitHub Actions runs these checks on pushes and pull requests; secret scanning remains separate.
+This checks syntax for repo-owned launchers and smoke scripts, the code profile, OpenBrain, Graphify, and no-voice integration smoke tests. It does not install dependencies or require Docker or network access. GitHub Actions runs these checks on pushes and pull requests; secret scanning remains separate.
 
 The Linux end-to-end Docker smoke test remains a separate local check:
 
@@ -196,8 +192,6 @@ It verifies startup without provider credentials, profile discovery, configurati
 ## License and attribution
 
 My original work in this repository is available under the [MIT License](LICENSE). Third-party tools, plugins, and bundled material remain subject to their own licenses.
-
-The ECC profile bundles material from [affaan-m/ECC](https://github.com/affaan-m/ECC) under its upstream MIT license. Its pinned source, license, and asset provenance are recorded under `agent_profiles/ecc/`.
 
 The skills copied from [`mattpocock/skills`](https://github.com/mattpocock/skills) for `pibrain`, `pimatt`, and `code` retain their MIT license and provenance records under the applicable profile's `LICENSES/` or `skills/LICENSES/` directory and `skills-lock.json` file.
 
