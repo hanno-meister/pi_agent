@@ -19,6 +19,10 @@
         "variant": "high",
         "skills": [
           "*",
+          "!agent-architecture-audit",
+          "!agent-harness-construction",
+          "!enterprise-agent-ops",
+          "!fastapi-patterns",
           "!deep-agents-core",
           "!deep-agents-memory",
           "!deep-agents-orchestration",
@@ -55,7 +59,11 @@
         "model": "openai/gpt-6-sol-fast",
         "variant": "high",
         "skills": [
-          "simplify"
+          "simplify",
+          "agent-architecture-audit",
+          "agent-harness-construction",
+          "enterprise-agent-ops",
+          "contract-first"
         ],
         "mcps": []
       },
@@ -85,7 +93,10 @@
       "fixer": {
         "model": "openai/gpt-6.1-sol",
         "variant": "low",
-        "skills": [],
+        "skills": [
+          "karpathy-guidelines",
+          "fastapi-patterns"
+        ],
         "mcps": []
       },
       "langchain-expert": {
@@ -104,6 +115,10 @@
         "variant": "high",
         "skills": [
           "*",
+          "!agent-architecture-audit",
+          "!agent-harness-construction",
+          "!enterprise-agent-ops",
+          "!fastapi-patterns",
           "!deep-agents-core",
           "!deep-agents-memory",
           "!deep-agents-orchestration",
@@ -137,7 +152,11 @@
         "model": "anthropic/claude-opus-5-5",
         "variant": "high",
         "skills": [
-          "simplify"
+          "simplify",
+          "agent-architecture-audit",
+          "agent-harness-construction",
+          "enterprise-agent-ops",
+          "contract-first"
         ],
         "mcps": []
       },
@@ -167,7 +186,10 @@
       "fixer": {
         "model": "anthropic/claude-haiku-5-5",
         "variant": "high",
-        "skills": [],
+        "skills": [
+          "karpathy-guidelines",
+          "fastapi-patterns"
+        ],
         "mcps": []
       },
       "langchain-expert": {
@@ -187,6 +209,10 @@
         "temperature": 0.4,
         "skills": [
           "*",
+          "!agent-architecture-audit",
+          "!agent-harness-construction",
+          "!enterprise-agent-ops",
+          "!fastapi-patterns",
           "!deep-agents-core",
           "!deep-agents-memory",
           "!deep-agents-orchestration",
@@ -221,7 +247,11 @@
         "variant": "max",
         "temperature": 0.4,
         "skills": [
-          "simplify"
+          "simplify",
+          "agent-architecture-audit",
+          "agent-harness-construction",
+          "enterprise-agent-ops",
+          "contract-first"
         ],
         "mcps": []
       },
@@ -253,7 +283,10 @@
         "model": "openrouter/poolside/laguna-s-2.1:free",
         "variant": "high",
         "temperature": 0.2,
-        "skills": [],
+        "skills": [
+          "karpathy-guidelines",
+          "fastapi-patterns"
+        ],
         "mcps": []
       },
       "observer": {
@@ -279,6 +312,7 @@
     "langchain-expert": {
       "description": "LangChain / LangGraph / LangSmith / Deep Agents specialist",
       "skills": [
+        "agent-architecture-audit",
         "deep-agents-core",
         "deep-agents-memory",
         "deep-agents-orchestration",

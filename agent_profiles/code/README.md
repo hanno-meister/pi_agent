@@ -143,6 +143,26 @@ The EU `langsmith` MCP uses `LANGSMITH_API_KEY` in its `X-Api-Key` header with
 `oauth: false`; it does not use an OAuth browser flow. Provide the key through
 the environment, never tracked files.
 
+## Curated ECC skills
+
+Six unmodified skills from [affaan-m/ecc](https://github.com/affaan-m/ecc)
+are pinned in the profile-root `skills-lock.json` to revision
+`25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b`:
+
+| Skill | Agent access |
+| --- | --- |
+| `agent-architecture-audit` | Oracle; optional `langchain-expert` (disabled by default) |
+| `agent-harness-construction` | Oracle |
+| `enterprise-agent-ops` | Oracle |
+| `contract-first` | Orchestrator, oracle |
+| `agent-introspection-debugging` | Orchestrator |
+| `fastapi-patterns` | Fixer |
+
+The orchestrator excludes the four oracle/fixer-only skills in every preset.
+The fixer also receives `karpathy-guidelines` for coding work. For FastAPI,
+add authorization checks rather than copying the skill's auth examples as-is.
+Routing rules live in `opencode/oh-my-opencode-slim/orchestrator_append.md`.
+
 ## Bundled skill attribution
 
 Selected skills are copied from
@@ -163,6 +183,11 @@ The unmodified `karpathy-guidelines` skill comes from
 [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills).
 Its pinned source and upstream MIT declaration are recorded in
 `LICENSES/andrej-karpathy-skills-NOTICE.txt` and `skills-lock.json`.
+
+The curated ECC skills come from
+[affaan-m/ecc](https://github.com/affaan-m/ecc) under the MIT License. Their
+revision, source paths, and content hashes are recorded in `skills-lock.json`;
+the license text is in `LICENSES/ecc-MIT.txt`.
 
 ## Add or update skills
 
@@ -187,6 +212,18 @@ This is a project-scoped skills-cli install, not a global install. The
 only the `code` profile discovers them. The installer updates
 `skills-lock.json` beside this README. Review skill and lock-file changes before
 committing them. `/root/.agents/skills` remains untouched.
+
+To remove the six ECC skills, run from this directory:
+
+```sh
+npx skills@latest remove agent-architecture-audit agent-harness-construction \
+  enterprise-agent-ops contract-first agent-introspection-debugging fastapi-patterns -y
+```
+
+Check `skills-lock.json` afterward: project-scope removal may leave lock
+entries. Revert the ECC agent-skill lists in `opencode/oh-my-opencode-slim.jsonc`
+and the routing hints in `opencode/oh-my-opencode-slim/orchestrator_append.md`
+by hand; remove `LICENSES/ecc-MIT.txt` and this documentation if no longer used.
 
 Refresh the provider model list:
 
