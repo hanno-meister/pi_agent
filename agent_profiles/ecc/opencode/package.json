@@ -1,7 +1,0 @@
-{
-  "private": true,
-  "dependencies": {
-    "@opencode-ai/plugin": "1.19.0",
-    "ecc-universal": "2.2.3"
-  }
-}

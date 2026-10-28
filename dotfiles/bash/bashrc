@@ -2,3 +2,8 @@
 # Optional provider credentials are supplied by Docker Compose, never here.
 
 # `pimatt` and `pibrain` are installed in /usr/local/bin by the container image.
+
+# >>> oh-my-opencode-slim background subagents >>>
+export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
+export OPENCODE_ENABLE_EXA=1
+# <<< oh-my-opencode-slim background subagents <<<
